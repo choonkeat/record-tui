@@ -1,0 +1,150 @@
+package html
+
+import (
+	"encoding/base64"
+	"encoding/json"
+)
+
+// RenderPlaybackHTML generates HTML document with terminal display.
+// Encodes frames as base64 to embed directly in the HTML.
+func RenderPlaybackHTML(frames []PlaybackFrame) (string, error) {
+	// Encode frames as base64 to avoid escaping issues
+	framesJSON, err := json.Marshal(frames)
+	if err != nil {
+		return "", err
+	}
+
+	framesBase64 := base64.StdEncoding.EncodeToString(framesJSON)
+
+	html := `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terminal</title>
+  <!-- xterm.js CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: auto;
+      background-color: #1e1e1e;
+      color: #d4d4d4;
+      font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+      line-height: 1.4;
+    }
+
+    #terminal {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div id="terminal"></div>
+
+  <!-- xterm.js script -->
+  <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+
+  <script>
+    // Decode base64-encoded frame data (UTF-8 safe)
+    const framesBase64 = '` + framesBase64 + `';
+    const framesJson = new TextDecoder().decode(
+      Uint8Array.from(atob(framesBase64), c => c.charCodeAt(0))
+    );
+    const frames = JSON.parse(framesJson);
+
+    // Get content to calculate dimensions (use last frame which has all content)
+    const content = frames.length > 0 ? frames[frames.length - 1].content : '(No frames to display)';
+
+    // Parse ANSI escape sequences to find actual cursor positions used
+    // Look for cursor positioning sequences like ESC[row;colH
+    let maxUsedRow = 1;
+    const cursorPositionRegex = /\x1b\[([0-9]+);([0-9]+)H/g;
+    let match;
+    while ((match = cursorPositionRegex.exec(content)) !== null) {
+      const row = parseInt(match[1], 10);
+      if (row > 0) {
+        maxUsedRow = Math.max(maxUsedRow, row);
+      }
+    }
+    // Also count newlines as a fallback minimum height
+    const lineCount = content.split('\n').length;
+    const estimatedRows = Math.max(maxUsedRow, lineCount, 24);
+
+    // Estimate cols from content
+    const normalized = content.split('\r\n').join('\n').split('\r').join('\n');
+    let lines = normalized.split('\n');
+    let maxLineLength = 0;
+    for (const line of lines) {
+      maxLineLength = Math.max(maxLineLength, line.length);
+    }
+    // Use max of 240 to avoid excessively wide terminals
+    const contentCols = Math.min(Math.max(maxLineLength, 80), 240);
+
+    // Initialize xterm.js with dimensions based on actual content usage
+    const terminalDiv = document.getElementById('terminal');
+    const xterm = new Terminal({
+      cols: contentCols,
+      rows: estimatedRows,
+      cursorBlink: false,
+      disableStdin: true,  // Disable keyboard input to allow normal page scrolling
+      theme: {
+        background: '#1e1e1e',
+        foreground: '#d4d4d4',
+      },
+      allowProposedApi: true,
+    });
+    xterm.open(terminalDiv);
+
+    // Prevent xterm from capturing focus
+    const terminalElement = document.querySelector('.xterm textarea');
+    if (terminalElement) {
+      terminalElement.remove();
+    }
+
+    // Display first (and only) frame
+    xterm.write(content);
+
+    // After rendering, check actual rendered height and resize if needed
+    // This handles cases where TUI positioning might have created empty rows
+    setTimeout(() => {
+      const buffer = xterm.buffer.active;
+      if (!buffer) return;
+
+      // Find the last row that has any non-whitespace content
+      let lastContentRow = 0;
+      const bufferLength = buffer.length;
+      for (let i = bufferLength - 1; i >= 0; i--) {
+        const line = buffer.getLine(i);
+        if (line) {
+          const lineStr = line.translateToString(true).trim();
+          if (lineStr.length > 0) {
+            lastContentRow = i + 1;
+            break;
+          }
+        }
+      }
+
+      // Account for cursor position too
+      const cursorRow = buffer.cursorY + 1;
+      const actualHeight = Math.max(lastContentRow, cursorRow, 1);
+
+      // Only resize if we found less content than allocated
+      if (actualHeight < estimatedRows) {
+        xterm.resize(contentCols, actualHeight);
+      }
+    }, 0);
+  </script>
+</body>
+</html>`
+
+	return html, nil
+}

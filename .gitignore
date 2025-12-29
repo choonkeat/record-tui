@@ -1,0 +1,24 @@
+# Build artifacts
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Generated files
+*.html
+*.log
+*.jsonl
+
+# Editor & IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+
+# Runtime
+.claude/
