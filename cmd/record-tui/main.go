@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"time"
 
@@ -45,6 +46,36 @@ func getRecordingDir() (string, error) {
 	}
 
 	return recordingDir, nil
+}
+
+// isInteractiveTerminal checks if stdout is connected to a TTY
+func isInteractiveTerminal() bool {
+	stat, err := os.Stdout.Stat()
+	if err != nil {
+		return false
+	}
+	// Check if stdout is a character device (terminal)
+	return (stat.Mode() & os.ModeCharDevice) != 0
+}
+
+// isSSHSession checks if running over SSH
+func isSSHSession() bool {
+	return os.Getenv("SSH_CLIENT") != ""
+}
+
+// openRecordingDir opens the recording directory in the file explorer
+// Only opens if running in an interactive terminal and not over SSH
+func openRecordingDir(dir string) {
+	// Skip if not interactive
+	if !isInteractiveTerminal() {
+		return
+	}
+	// Skip if over SSH
+	if isSSHSession() {
+		return
+	}
+	// Open directory (silently ignore errors)
+	exec.Command("open", dir).Run()
 }
 
 func main() {
@@ -89,5 +120,9 @@ func main() {
 
 	// Success message
 	fmt.Fprintf(os.Stderr, "✓ Recording saved to: %s/\n", recordingDir)
+
+	// Open directory in file explorer (interactive terminals only, skip SSH)
+	openRecordingDir(recordingDir)
+
 	os.Exit(0)
 }
