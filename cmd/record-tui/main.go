@@ -79,8 +79,20 @@ func openRecordingDir(dir string) {
 }
 
 func main() {
+	convertFlag := flag.String("convert", "", "Convert existing session.log file to HTML")
 	flag.Parse()
 	args := flag.Args()
+
+	// Handle conversion mode
+	if *convertFlag != "" {
+		htmlPath, err := record.ConvertSessionToHTML(*convertFlag)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: Conversion failed: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Fprintf(os.Stderr, "✓ HTML generated: %s\n", htmlPath)
+		os.Exit(0)
+	}
 
 	// Setup environment for color recording
 	record.SetupRecordingEnvironment()
