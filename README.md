@@ -2,6 +2,8 @@
 
 Record terminal sessions and convert them to beautiful standalone HTML with xterm.js rendering.
 
+**See [example output](https://record-tui.netlify.app)** - recorded `claude` session with ANSI colors and terminal emulation.
+
 ## Features
 
 - **Records & converts**: Terminal sessions recorded with `script` command, automatically converted to HTML
