@@ -1,4 +1,4 @@
-.PHONY: build build-all clean test install info
+.PHONY: build build-all clean test install info install-pdf-tool
 
 # Build record-tui binary
 build:
@@ -19,6 +19,13 @@ install: build
 	cp bin/record-tui ~/bin/record-tui
 	chmod +x ~/bin/record-tui
 	@echo "✓ Installed to ~/bin/record-tui"
+
+# Install PDF conversion tool dependencies
+install-pdf-tool:
+	cd cmd/to-pdf && npm install
+	sed 's|@REPO_DIR@|'$(PWD)'|g' cmd/to-pdf/to-pdf.sh > ~/bin/to-pdf
+	chmod +x ~/bin/to-pdf
+	@echo "✓ PDF conversion tool installed to ~/bin/to-pdf"
 
 # Clean build artifacts
 clean:

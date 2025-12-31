@@ -1,0 +1,13 @@
+{
+  "name": "record-tui-to-pdf",
+  "version": "1.0.0",
+  "description": "Convert record-tui HTML output to PDF using Playwright",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "convert": "node index.js"
+  },
+  "dependencies": {
+    "playwright": "^1.48.2"
+  }
+}

@@ -14,6 +14,12 @@ Record terminal sessions and convert them to beautiful standalone HTML with xter
 make install  # Compile and install to ~/bin/record-tui
 ```
 
+Optional: PDF export support
+
+```bash
+make install-pdf-tool  # Enable automatic PDF generation
+```
+
 ## Usage
 
 Record a terminal session:
@@ -31,6 +37,7 @@ record-tui sh -c "ls -la"
 Files are saved to `~/.record-tui/YYYYMMDD-HHMMSS/`:
 - `session.log` — raw session file
 - `session.log.html` — standalone HTML with ANSI colors and terminal emulation
+- `session.log.pdf` — printable PDF (A4 landscape, requires `make install-pdf-tool`)
 
 Recording stops when:
 - Command exits (if you specified one)
@@ -42,10 +49,11 @@ The directory opens automatically in Finder when recording completes (unless ove
 
 - ✅ **One command**: Records and converts automatically
 - ✅ **Standalone HTML**: No external dependencies, works offline after generation
+- ✅ **PDF export**: Generate printable PDFs via `make install-pdf-tool` (optional)
 - ✅ **Colors preserved**: Full ANSI color support (8 colors + bright variants)
 - ✅ **Auto-open**: Directory opens in Finder on completion
-- ✅ **Single binary**: No Node.js, npm, or external dependencies
-- ✅ **Instant**: Fast recording and HTML generation
+- ✅ **Single binary**: No Node.js, npm, or external dependencies (except optional PDF tool)
+- ✅ **Instant**: Fast recording and HTML generation (~2s more for PDF)
 
 ## What Gets Recorded
 

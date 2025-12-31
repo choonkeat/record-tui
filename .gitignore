@@ -9,6 +9,7 @@ bin/
 *.html
 *.log
 *.jsonl
+node_modules
 
 # Editor & IDE
 .vscode/

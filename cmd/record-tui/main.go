@@ -91,6 +91,16 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Fprintf(os.Stderr, "✓ HTML generated: %s\n", htmlPath)
+
+		// Try to convert HTML to PDF if to-pdf tool is available
+		pdfPath := htmlPath[:len(htmlPath)-len(".html")] + ".pdf"
+		cmd := exec.Command("to-pdf", htmlPath, pdfPath)
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err == nil {
+			fmt.Fprintf(os.Stderr, "✓ PDF generated: %s\n", pdfPath)
+		}
+		// Silently ignore if to-pdf not found or fails
+
 		os.Exit(0)
 	}
 
@@ -128,6 +138,15 @@ func main() {
 		// Don't exit - recording was successful even if conversion failed
 	} else {
 		fmt.Fprintf(os.Stderr, "✓ HTML generated: %s\n", htmlPath)
+
+		// Try to convert HTML to PDF if to-pdf tool is available
+		pdfPath := htmlPath[:len(htmlPath)-len(".html")] + ".pdf"
+		cmd := exec.Command("to-pdf", htmlPath, pdfPath)
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err == nil {
+			fmt.Fprintf(os.Stderr, "✓ PDF generated: %s\n", pdfPath)
+		}
+		// Silently ignore if to-pdf not found or fails
 	}
 
 	// Success message
