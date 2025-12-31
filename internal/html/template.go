@@ -36,7 +36,7 @@ func RenderPlaybackHTML(frames []PlaybackFrame) (string, error) {
       height: auto;
       background-color: #1e1e1e;
       color: #d4d4d4;
-      font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+      font-family: 'SF Mono', 'Menlo', 'Consolas', 'Monaco', 'Courier New', monospace;
       line-height: 1.4;
     }
 
@@ -117,6 +117,7 @@ func RenderPlaybackHTML(frames []PlaybackFrame) (string, error) {
     const xterm = new Terminal({
       cols: contentCols,
       rows: estimatedRows,
+      fontSize: 15,
       cursorBlink: false,
       disableStdin: true,  // Disable keyboard input to allow normal page scrolling
       theme: {
