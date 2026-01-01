@@ -19,5 +19,14 @@ if [ ! -d "$REPO_DIR/cmd/to-pdf/node_modules" ]; then
   exit 1
 fi
 
+# Check Node.js version (Playwright requires Node.js 18+)
+NODE_VERSION=$(node -v | sed 's/v//' | cut -d. -f1)
+if [ "$NODE_VERSION" -lt 18 ]; then
+  echo "Error: Node.js 18 or higher is required for PDF export." >&2
+  echo "Current version: $(node -v)" >&2
+  echo "Please upgrade Node.js: https://nodejs.org/" >&2
+  exit 1
+fi
+
 # Execute the Node.js tool
 exec node "$REPO_DIR/cmd/to-pdf/index.js" "$@"

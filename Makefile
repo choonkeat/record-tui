@@ -22,7 +22,16 @@ install: build
 
 # Install PDF conversion tool dependencies
 install-pdf-tool:
+	@command -v node >/dev/null 2>&1 || { echo "Error: Node.js is not installed. Please install Node.js 18 or higher."; exit 1; }
+	@NODE_VERSION=$$(node -v | sed 's/v//' | cut -d. -f1); \
+	if [ "$$NODE_VERSION" -lt 18 ]; then \
+		echo "Error: Node.js 18 or higher is required for PDF export."; \
+		echo "Current version: $$(node -v)"; \
+		echo "Please upgrade Node.js: https://nodejs.org/"; \
+		exit 1; \
+	fi
 	cd cmd/to-pdf && npm install
+	cd cmd/to-pdf && npx playwright install chromium
 	sed 's|@REPO_DIR@|'$(PWD)'|g' cmd/to-pdf/to-pdf.sh > ~/bin/to-pdf
 	chmod +x ~/bin/to-pdf
 	@echo "✓ PDF conversion tool installed to ~/bin/to-pdf"

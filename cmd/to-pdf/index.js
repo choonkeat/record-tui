@@ -73,6 +73,7 @@ async function convertHtmlToPdf(htmlPath, outputPath, format = 'A4-landscape', s
     // Build PDF options
     const pdfOptions = {
       path: outPath,
+      printBackground: true,  // Essential for dark terminal themes
       margin: {
         top: '0.25in',
         right: '0.25in',
