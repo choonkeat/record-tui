@@ -5,8 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/choonkeat/record-tui/internal/html"
-	"github.com/choonkeat/record-tui/internal/session"
+	"github.com/choonkeat/record-tui/playback"
 )
 
 // ConvertSessionToHTML reads a session.log file, strips metadata, and generates HTML output.
@@ -32,13 +31,13 @@ func ConvertSessionToHTML(sessionLogPath string) (string, error) {
 	}
 
 	// Strip session metadata (Script started/done lines from `script` command)
-	cleanedContent := session.StripMetadata(string(sessionContent))
+	cleanedContent := playback.StripMetadata(string(sessionContent))
 	if cleanedContent == "" {
 		return "", fmt.Errorf("session.log appears to be empty after metadata stripping")
 	}
 
 	// Create playback frame with all content at timestamp 0.0 (static display)
-	frames := []html.PlaybackFrame{
+	frames := []playback.Frame{
 		{
 			Timestamp: 0.0,
 			Content:   cleanedContent,
@@ -46,7 +45,7 @@ func ConvertSessionToHTML(sessionLogPath string) (string, error) {
 	}
 
 	// Generate HTML using xterm.js
-	htmlContent, err := html.RenderPlaybackHTML(frames)
+	htmlContent, err := playback.RenderHTML(frames)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate HTML: %w", err)
 	}
@@ -88,13 +87,13 @@ func ConvertSessionToHTMLWithPath(sessionLogPath string, outputPath string) (str
 	}
 
 	// Strip metadata
-	cleanedContent := session.StripMetadata(string(sessionContent))
+	cleanedContent := playback.StripMetadata(string(sessionContent))
 	if cleanedContent == "" {
 		return "", fmt.Errorf("session.log appears to be empty after metadata stripping")
 	}
 
 	// Create playback frame
-	frames := []html.PlaybackFrame{
+	frames := []playback.Frame{
 		{
 			Timestamp: 0.0,
 			Content:   cleanedContent,
@@ -102,7 +101,7 @@ func ConvertSessionToHTMLWithPath(sessionLogPath string, outputPath string) (str
 	}
 
 	// Generate HTML
-	htmlContent, err := html.RenderPlaybackHTML(frames)
+	htmlContent, err := playback.RenderHTML(frames)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate HTML: %w", err)
 	}

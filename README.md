@@ -73,6 +73,43 @@ ls ~/.record-tui/
 open ~/.record-tui/20251231-144256/session.log.html
 ```
 
+## Library Usage
+
+record-tui can be imported as a Go library for generating HTML from terminal recordings:
+
+```bash
+go get github.com/choonkeat/record-tui@latest
+```
+
+```go
+package main
+
+import (
+    "os"
+
+    "github.com/choonkeat/record-tui/playback"
+)
+
+func main() {
+    // Read session.log content (from macOS or Linux `script` command)
+    content, _ := os.ReadFile("session.log")
+
+    // Strip script header/footer metadata
+    cleaned := playback.StripMetadata(string(content))
+
+    // Create playback frames (single frame for static display)
+    frames := []playback.Frame{
+        {Timestamp: 0, Content: cleaned},
+    }
+
+    // Generate standalone HTML with xterm.js
+    html, _ := playback.RenderHTML(frames)
+    os.WriteFile("output.html", []byte(html), 0644)
+}
+```
+
+Supports both macOS and Linux `script` command output formats.
+
 ## Development
 
 ### Build
@@ -87,6 +124,7 @@ make clean   # Remove build artifacts
 
 ```
 cmd/record-tui/    # CLI entry point
+playback/          # Public API (import this package)
 internal/
 ├── record/        # Recording and conversion logic
 ├── html/          # HTML generation with xterm.js
