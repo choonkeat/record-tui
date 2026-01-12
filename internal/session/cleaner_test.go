@@ -121,3 +121,68 @@ hello world
 		t.Errorf("Result should contain 'hello world'")
 	}
 }
+
+// Linux format tests - Linux script uses different header/footer format
+
+func TestStripMetadata_LinuxFormat(t *testing.T) {
+	input := `Script started on 2026-01-12 06:41:43+00:00 [COMMAND="claude" TERM="xterm-256color" TTY="/dev/pts/4" COLUMNS="132" LINES="49"]
+actual content here
+Script done on 2026-01-12 06:45:00+00:00 [COMMAND_EXIT_STATUS="0"]
+`
+
+	result := StripMetadata(input)
+
+	// Should contain the actual content
+	if !strings.Contains(result, "actual content here") {
+		t.Errorf("Result should contain 'actual content here', got: %q", result)
+	}
+
+	// Should not contain the metadata
+	if strings.Contains(result, "Script started") {
+		t.Errorf("Result should not contain 'Script started'")
+	}
+	if strings.Contains(result, "Script done") {
+		t.Errorf("Result should not contain 'Script done'")
+	}
+	if strings.Contains(result, "COMMAND_EXIT_STATUS") {
+		t.Errorf("Result should not contain 'COMMAND_EXIT_STATUS'")
+	}
+}
+
+func TestStripMetadata_LinuxFormat_MultilineContent(t *testing.T) {
+	input := `Script started on 2026-01-12 06:41:43+00:00 [COMMAND="bash" TERM="xterm-256color"]
+line 1
+line 2
+line 3
+Script done on 2026-01-12 06:45:00+00:00 [COMMAND_EXIT_STATUS="0"]
+`
+
+	result := StripMetadata(input)
+
+	if !strings.Contains(result, "line 1") {
+		t.Errorf("Result should contain 'line 1'")
+	}
+	if !strings.Contains(result, "line 2") {
+		t.Errorf("Result should contain 'line 2'")
+	}
+	if !strings.Contains(result, "line 3") {
+		t.Errorf("Result should contain 'line 3'")
+	}
+}
+
+func TestStripMetadata_LinuxFormat_NoFooter(t *testing.T) {
+	// Linux format with header only (e.g., interrupted session)
+	input := `Script started on 2026-01-12 06:41:43+00:00 [COMMAND="claude" TERM="xterm-256color"]
+hello world
+`
+
+	result := StripMetadata(input)
+
+	if !strings.Contains(result, "hello world") {
+		t.Errorf("Result should contain 'hello world', got: %q", result)
+	}
+
+	if strings.Contains(result, "Script started") {
+		t.Errorf("Result should not contain 'Script started'")
+	}
+}
