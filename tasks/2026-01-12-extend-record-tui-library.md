@@ -183,7 +183,7 @@ go test ./...               # Full suite - ensures cmd still works
 | 2 | Linux format support | DONE - `6a3daa7` (already worked, added tests) |
 | 3 | Public API | DONE - `028b56a` (converter dogfoods it, tests pass) |
 
-## End-to-End Verification (Pending)
+## End-to-End Verification [DONE]
 
-1. **Git push for macOS testing**: `git push origin expose-api` - for user to test on Mac
-2. **Test container + MCP browser**: Boot test container, generate HTML, verify in browser
+1. **Git push for macOS testing**: DONE - pushed, tested on Mac, works
+2. **Test container + MCP browser**: Skipped (macOS test sufficient)
