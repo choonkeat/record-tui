@@ -42,11 +42,18 @@ func RenderHTML(frames []Frame, opts ...Options) (string, error) {
 		}
 	}
 
-	// Extract title from options
+	// Extract options
 	title := "Terminal"
-	if len(opts) > 0 && opts[0].Title != "" {
-		title = opts[0].Title
+	var footerLink html.FooterLink
+	if len(opts) > 0 {
+		if opts[0].Title != "" {
+			title = opts[0].Title
+		}
+		footerLink = html.FooterLink{
+			Text: opts[0].FooterLink.Text,
+			URL:  opts[0].FooterLink.URL,
+		}
 	}
 
-	return html.RenderPlaybackHTML(internalFrames, title)
+	return html.RenderPlaybackHTML(internalFrames, title, footerLink)
 }

@@ -126,3 +126,31 @@ func TestRenderHTML_TitleEscaping(t *testing.T) {
 		t.Error("HTML title should contain escaped characters")
 	}
 }
+
+func TestRenderHTML_WithFooterLink(t *testing.T) {
+	frames := []Frame{{Timestamp: 0, Content: "hello"}}
+	html, err := RenderHTML(frames, Options{
+		Title: "Test",
+		FooterLink: FooterLink{
+			Text: "swe-swe",
+			URL:  "https://github.com/choonkeat/swe-swe",
+		},
+	})
+	if err != nil {
+		t.Fatalf("RenderHTML failed: %v", err)
+	}
+
+	// Should have both record-tui and custom link
+	if !strings.Contains(html, ">record-tui</a>") {
+		t.Error("HTML should contain record-tui link")
+	}
+	if !strings.Contains(html, " x ") {
+		t.Error("HTML should contain ' x ' separator")
+	}
+	if !strings.Contains(html, `href="https://github.com/choonkeat/swe-swe"`) {
+		t.Error("HTML should contain custom footer URL")
+	}
+	if !strings.Contains(html, ">swe-swe</a>") {
+		t.Error("HTML should contain custom footer text")
+	}
+}
