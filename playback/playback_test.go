@@ -98,3 +98,31 @@ func TestRenderHTML_PreservesANSI(t *testing.T) {
 		t.Error("HTML seems too short, ANSI content may not be included")
 	}
 }
+
+func TestRenderHTML_WithTitle(t *testing.T) {
+	frames := []Frame{{Timestamp: 0, Content: "hello"}}
+	html, err := RenderHTML(frames, Options{Title: "My Session"})
+	if err != nil {
+		t.Fatalf("RenderHTML failed: %v", err)
+	}
+
+	if !strings.Contains(html, "<title>My Session</title>") {
+		t.Error("HTML should contain custom title")
+	}
+}
+
+func TestRenderHTML_TitleEscaping(t *testing.T) {
+	frames := []Frame{{Timestamp: 0, Content: "hello"}}
+	html, err := RenderHTML(frames, Options{Title: "<script>alert('xss')</script>"})
+	if err != nil {
+		t.Fatalf("RenderHTML failed: %v", err)
+	}
+
+	// Title should be HTML escaped
+	if strings.Contains(html, "<script>alert") {
+		t.Error("HTML title should be escaped to prevent XSS")
+	}
+	if !strings.Contains(html, "&lt;script&gt;") {
+		t.Error("HTML title should contain escaped characters")
+	}
+}

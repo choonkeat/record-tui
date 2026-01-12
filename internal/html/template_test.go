@@ -15,7 +15,7 @@ func TestRenderPlaybackHTML_WithFrames(t *testing.T) {
 		},
 	}
 
-	html, err := RenderPlaybackHTML(frames)
+	html, err := RenderPlaybackHTML(frames, "")
 	if err != nil {
 		t.Fatalf("RenderPlaybackHTML failed: %v", err)
 	}
@@ -46,7 +46,7 @@ func TestRenderPlaybackHTML_ValidBase64Encoding(t *testing.T) {
 		},
 	}
 
-	html, err := RenderPlaybackHTML(frames)
+	html, err := RenderPlaybackHTML(frames, "")
 	if err != nil {
 		t.Fatalf("RenderPlaybackHTML failed: %v", err)
 	}
@@ -105,7 +105,7 @@ func TestRenderPlaybackHTML_MultipleFrames(t *testing.T) {
 		},
 	}
 
-	html, err := RenderPlaybackHTML(frames)
+	html, err := RenderPlaybackHTML(frames, "")
 	if err != nil {
 		t.Fatalf("RenderPlaybackHTML failed: %v", err)
 	}
@@ -134,7 +134,7 @@ func TestRenderPlaybackHTML_ANSICodes(t *testing.T) {
 		},
 	}
 
-	html, err := RenderPlaybackHTML(frames)
+	html, err := RenderPlaybackHTML(frames, "")
 	if err != nil {
 		t.Fatalf("RenderPlaybackHTML failed: %v", err)
 	}
@@ -159,7 +159,7 @@ func TestRenderPlaybackHTML_ANSICodes(t *testing.T) {
 func TestRenderPlaybackHTML_EmptyFrames(t *testing.T) {
 	frames := []PlaybackFrame{}
 
-	html, err := RenderPlaybackHTML(frames)
+	html, err := RenderPlaybackHTML(frames, "")
 	if err != nil {
 		t.Fatalf("RenderPlaybackHTML failed: %v", err)
 	}

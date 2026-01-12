@@ -30,7 +30,9 @@ func StripMetadata(content string) string {
 // For static display, pass a single Frame with Timestamp 0.
 // The HTML includes proper ANSI color rendering, automatic dimension calculation,
 // and responsive layout.
-func RenderHTML(frames []Frame) (string, error) {
+//
+// Options can be used to customize the output (e.g., page title).
+func RenderHTML(frames []Frame, opts ...Options) (string, error) {
 	// Convert public Frame to internal PlaybackFrame
 	internalFrames := make([]html.PlaybackFrame, len(frames))
 	for i, f := range frames {
@@ -39,5 +41,12 @@ func RenderHTML(frames []Frame) (string, error) {
 			Content:   f.Content,
 		}
 	}
-	return html.RenderPlaybackHTML(internalFrames)
+
+	// Extract title from options
+	title := "Terminal"
+	if len(opts) > 0 && opts[0].Title != "" {
+		title = opts[0].Title
+	}
+
+	return html.RenderPlaybackHTML(internalFrames, title)
 }

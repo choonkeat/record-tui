@@ -9,3 +9,8 @@ type Frame struct {
 	Timestamp float64 `json:"timestamp"` // Time in seconds (cumulative from start)
 	Content   string  `json:"content"`   // Terminal content (with ANSI codes preserved)
 }
+
+// Options configures HTML rendering behavior.
+type Options struct {
+	Title string // Page title (defaults to "Terminal" if empty)
+}

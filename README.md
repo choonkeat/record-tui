@@ -103,7 +103,9 @@ func main() {
     }
 
     // Generate standalone HTML with xterm.js
-    html, _ := playback.RenderHTML(frames)
+    html, _ := playback.RenderHTML(frames, playback.Options{
+        Title: "My Session", // Optional: custom page title
+    })
     os.WriteFile("output.html", []byte(html), 0644)
 }
 ```

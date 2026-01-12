@@ -3,11 +3,13 @@ package html
 import (
 	"encoding/base64"
 	"encoding/json"
+	"html"
 )
 
 // RenderPlaybackHTML generates HTML document with terminal display.
 // Encodes frames as base64 to embed directly in the HTML.
-func RenderPlaybackHTML(frames []PlaybackFrame) (string, error) {
+// Title is used for the page title (defaults to "Terminal" if empty).
+func RenderPlaybackHTML(frames []PlaybackFrame, title string) (string, error) {
 	// Encode frames as base64 to avoid escaping issues
 	framesJSON, err := json.Marshal(frames)
 	if err != nil {
@@ -16,12 +18,18 @@ func RenderPlaybackHTML(frames []PlaybackFrame) (string, error) {
 
 	framesBase64 := base64.StdEncoding.EncodeToString(framesJSON)
 
-	html := `<!DOCTYPE html>
+	// Default title
+	if title == "" {
+		title = "Terminal"
+	}
+	escapedTitle := html.EscapeString(title)
+
+	htmlDoc := `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Terminal</title>
+  <title>` + escapedTitle + `</title>
   <!-- xterm.js CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
   <style>
@@ -170,5 +178,5 @@ func RenderPlaybackHTML(frames []PlaybackFrame) (string, error) {
 </body>
 </html>`
 
-	return html, nil
+	return htmlDoc, nil
 }
