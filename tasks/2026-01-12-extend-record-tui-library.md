@@ -42,7 +42,11 @@ go test ./...
 
 ---
 
-## Phase 2: Linux Format Support
+## Phase 2: Linux Format Support [DONE]
+
+**Commit**: `6a3daa7` - test: add Linux script format tests for StripMetadata
+
+Note: The existing implementation already handled Linux format correctly. Added tests to document and protect this behavior.
 
 ### What Will Be Achieved
 The `session.StripMetadata()` function will correctly parse both macOS and Linux `script` header/footer formats.
@@ -174,5 +178,5 @@ go test ./...               # Full suite - ensures cmd still works
 | Phase | Description | Verification |
 |-------|-------------|--------------|
 | 1 | Fix go.mod version | DONE - `ca9c804` |
-| 2 | Linux format support | New tests pass, existing tests pass |
+| 2 | Linux format support | DONE - `6a3daa7` (already worked, added tests) |
 | 3 | Public API | cmd uses it, tests pass, push to origin, test container + MCP browser |
