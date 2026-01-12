@@ -5,7 +5,9 @@
 
 ---
 
-## Phase 1: Fix Go Version & Basic Library Structure
+## Phase 1: Fix Go Version & Basic Library Structure [DONE]
+
+**Commit**: `ca9c804` - fix: lower Go version requirement from 1.25.3 to 1.22
 
 ### What Will Be Achieved
 The record-tui package will be importable by other Go projects via `go get github.com/choonkeat/record-tui@<commit>`.
@@ -171,6 +173,6 @@ go test ./...               # Full suite - ensures cmd still works
 
 | Phase | Description | Verification |
 |-------|-------------|--------------|
-| 1 | Fix go.mod version | `go get` works, `go test ./...` passes |
+| 1 | Fix go.mod version | DONE - `ca9c804` |
 | 2 | Linux format support | New tests pass, existing tests pass |
 | 3 | Public API | cmd uses it, tests pass, push to origin, test container + MCP browser |
