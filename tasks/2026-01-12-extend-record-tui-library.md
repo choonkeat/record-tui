@@ -89,7 +89,9 @@ go test ./...  # Full suite for regression check
 
 ---
 
-## Phase 3: Library-Friendly API
+## Phase 3: Library-Friendly API [DONE]
+
+**Commit**: `028b56a` - feat: add public playback API for library usage
 
 ### What Will Be Achieved
 A clean public API that both swe-swe **and** record-tui's own `cmd/` can use.
@@ -179,4 +181,9 @@ go test ./...               # Full suite - ensures cmd still works
 |-------|-------------|--------------|
 | 1 | Fix go.mod version | DONE - `ca9c804` |
 | 2 | Linux format support | DONE - `6a3daa7` (already worked, added tests) |
-| 3 | Public API | cmd uses it, tests pass, push to origin, test container + MCP browser |
+| 3 | Public API | DONE - `028b56a` (converter dogfoods it, tests pass) |
+
+## End-to-End Verification (Pending)
+
+1. **Git push for macOS testing**: `git push origin expose-api` - for user to test on Mac
+2. **Test container + MCP browser**: Boot test container, generate HTML, verify in browser
