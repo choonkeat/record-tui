@@ -16,6 +16,7 @@ test:
 
 # Install binary to ~/bin
 install: build
+	rm -f ~/bin/record-tui
 	cp bin/record-tui ~/bin/record-tui
 	chmod +x ~/bin/record-tui
 	@echo "✓ Installed to ~/bin/record-tui"
