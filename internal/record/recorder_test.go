@@ -3,11 +3,25 @@ package record
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
+// skipIfNotMacOS skips the test if not running on macOS.
+// The script command syntax differs between macOS and Linux:
+// - macOS: script <outputPath> <command> [args...]
+// - Linux: script -c "<command>" <outputPath>
+// These tests use macOS syntax.
+func skipIfNotMacOS(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skipf("Skipping test on %s: script command uses macOS syntax", runtime.GOOS)
+	}
+}
+
 // TestRecordSession_VerifyFunction checks that RecordSession has correct signature
 func TestRecordSession_VerifyFunction(t *testing.T) {
+	skipIfNotMacOS(t)
+
 	// Create a temporary directory for test output
 	tmpDir := t.TempDir()
 	outputPath := filepath.Join(tmpDir, "test.log")
@@ -26,6 +40,8 @@ func TestRecordSession_VerifyFunction(t *testing.T) {
 
 // TestRecordSession_CreatesFile verifies that script command creates output file
 func TestRecordSession_CreatesFile(t *testing.T) {
+	skipIfNotMacOS(t)
+
 	tmpDir := t.TempDir()
 	outputPath := filepath.Join(tmpDir, "session.log")
 
@@ -51,6 +67,8 @@ func TestRecordSession_CreatesFile(t *testing.T) {
 
 // TestRecordSession_WithNoArgs verifies recording works without command args
 func TestRecordSession_WithNoArgs(t *testing.T) {
+	skipIfNotMacOS(t)
+
 	tmpDir := t.TempDir()
 	outputPath := filepath.Join(tmpDir, "session.log")
 
@@ -69,6 +87,8 @@ func TestRecordSession_WithNoArgs(t *testing.T) {
 
 // TestRecordSession_WithMultipleArgs verifies args are passed correctly
 func TestRecordSession_WithMultipleArgs(t *testing.T) {
+	skipIfNotMacOS(t)
+
 	tmpDir := t.TempDir()
 	outputPath := filepath.Join(tmpDir, "session.log")
 
@@ -88,6 +108,8 @@ func TestRecordSession_WithMultipleArgs(t *testing.T) {
 
 // TestRecordSessionDetailed_ReturnCode verifies exit code detection
 func TestRecordSessionDetailed_ReturnCode(t *testing.T) {
+	skipIfNotMacOS(t)
+
 	tmpDir := t.TempDir()
 	outputPath := filepath.Join(tmpDir, "session.log")
 
