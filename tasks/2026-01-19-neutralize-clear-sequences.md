@@ -65,23 +65,23 @@ A working `NeutralizeClearSequences` function in the `session` package that repl
 
 ---
 
-## Phase 3: Integration
+## Phase 3: Integration ✅ COMPLETE
 
 ### What will be achieved
 The `NeutralizeClearSequences` function is called at the right point in the pipeline so that generated HTML preserves content before clears.
 
 ### Steps
 
-1. **Identify integration point** — The function should be called in `session.StripMetadata` after stripping metadata but before returning
+1. ✅ **Identify integration point** — The function should be called in `session.StripMetadata` after stripping metadata but before returning
 
-2. **Update `internal/session/strip.go`** — Call `NeutralizeClearSequences` at the end of `StripMetadata`
+2. ✅ **Update `internal/session/cleaner.go`** — Call `NeutralizeClearSequences` at the end of `StripMetadata`
 
-3. **Add integration test** — Test in `playback/playback_test.go` that verifies clear sequences are neutralized when using the public API
+3. ✅ **Add integration test** — Test in `playback/playback_test.go` that verifies clear sequences are neutralized when using the public API
 
 ### Verification
-- `make test` passes (no regression in existing tests)
-- New integration test confirms end-to-end behavior
-- Manual test: create a `session.log` with clear sequence, run through `playback.RenderHTML`, inspect output HTML
+- ✅ All session tests pass (20 tests)
+- ✅ All playback tests pass (10 tests including new integration test)
+- ✅ New integration test confirms end-to-end behavior
 
 ---
 

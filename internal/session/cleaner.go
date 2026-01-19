@@ -51,5 +51,10 @@ func StripMetadata(content string) string {
 	if startIndex >= len(lines) || startIndex >= endIndex {
 		return ""
 	}
-	return strings.Join(lines[startIndex:endIndex], "\n")
+	content = strings.Join(lines[startIndex:endIndex], "\n")
+
+	// Neutralize clear sequences so content before clears is preserved
+	content = NeutralizeClearSequences(content)
+
+	return content
 }

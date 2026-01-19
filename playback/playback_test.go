@@ -154,3 +154,31 @@ func TestRenderHTML_WithFooterLink(t *testing.T) {
 		t.Error("HTML should contain custom footer text")
 	}
 }
+
+func TestStripMetadata_NeutralizesClearSequences(t *testing.T) {
+	// Integration test: StripMetadata should neutralize clear sequences
+	input := `Script started on Wed Dec 31 12:10:34 2025
+Command: bash
+first half` + "\x1b[2J" + `second half
+Script done on Wed Dec 31 12:11:22 2025
+`
+	result := StripMetadata(input)
+
+	// Both halves should be present
+	if !strings.Contains(result, "first half") {
+		t.Errorf("Result should contain 'first half', got: %q", result)
+	}
+	if !strings.Contains(result, "second half") {
+		t.Errorf("Result should contain 'second half', got: %q", result)
+	}
+
+	// Separator should be present
+	if !strings.Contains(result, "terminal cleared") {
+		t.Errorf("Result should contain separator 'terminal cleared', got: %q", result)
+	}
+
+	// Clear sequence should be gone
+	if strings.Contains(result, "\x1b[2J") {
+		t.Error("Result should not contain clear escape sequence")
+	}
+}
