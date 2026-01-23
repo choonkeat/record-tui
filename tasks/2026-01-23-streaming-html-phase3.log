@@ -1,3 +1,16 @@
 090733 STARTING Phase 3 Step 1: Create test server
        WILL DO: Create internal/html/testserver_test.go with server on port 3000
        EXPECT: Test server serves streaming HTML at / and session.log at /session.log
+
+090809 COMPLETED Phase 3 Step 1: Create test server
+       OBSERVED: Created internal/html/testserver_test.go
+       GOT: File compiles successfully, skips by default, runs with RUN_STREAMING_SERVER=1
+       STATUS: Step 1 complete
+
+090809 STARTING Phase 3 Step 2: Manual browser verification
+       WILL DO: Start test server, open browser, verify streaming behavior
+       EXPECT: 
+         - Browser shows "Loading..." initially
+         - Content renders progressively
+         - No header/footer visible
+         - No JavaScript console errors
