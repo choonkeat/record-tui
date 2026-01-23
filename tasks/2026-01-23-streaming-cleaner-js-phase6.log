@@ -1,0 +1,9 @@
+075105: Starting Phase 6 - Update RenderStreamingHTML
+Will be done:
+1. Extract browser-ready JS from cleaner.js
+2. Update template_streaming.go embedded JS
+3. Update streamSession() to use streaming cleaner
+4. Remove now-unused code from template
+5. Manual browser testing
+
+Expected: Streaming HTML uses the same tested cleaner logic as Node.js
