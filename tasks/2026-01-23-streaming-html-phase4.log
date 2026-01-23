@@ -1,0 +1,3 @@
+091119 STARTING Phase 4 Step 1: Add loading indicator to embedded HTML template
+       WILL DO: Modify internal/html/template.go to show "Loading..." before base64 parsing
+       EXPECT: Loading indicator visible before heavy JS processing
