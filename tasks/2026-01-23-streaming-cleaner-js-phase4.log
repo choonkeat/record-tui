@@ -1,0 +1,8 @@
+074719: Starting Phase 4 - Add self-tests for streaming
+Will be done:
+1. Add streaming test helper function
+2. Add test cases for various edge cases
+3. Verify streaming matches batch output
+4. Run node cleaner.js to execute self-tests
+
+Expected: All streaming self-tests pass
