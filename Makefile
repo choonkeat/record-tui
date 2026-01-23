@@ -1,4 +1,4 @@
-.PHONY: build build-all clean test install info install-pdf-tool
+.PHONY: build build-all clean test test-go test-js compare-output install info install-pdf-tool
 
 # Build record-tui binary
 build:
@@ -10,9 +10,20 @@ build-all: build
 	GOOS=darwin GOARCH=amd64 go build -o bin/record-tui-darwin-amd64 ./cmd/record-tui
 	GOOS=linux GOARCH=amd64 go build -o bin/record-tui-linux-amd64 ./cmd/record-tui
 
-# Run all tests
-test:
+# Run all tests (Go tests, JS output generation, then compare)
+test: test-go test-js compare-output
+
+# Run Go tests (generates .go.output files in recordings-output/)
+test-go:
 	go test ./internal/... -v
+
+# Run JS output generation (generates .js.output files in recordings-output/)
+test-js:
+	node internal/js/generate_output.js
+
+# Compare Go and JS outputs (fails if any differ)
+compare-output:
+	go test ./internal/session -run TestCompareGoAndJsOutput -v
 
 # Install binary to ~/bin
 install: build

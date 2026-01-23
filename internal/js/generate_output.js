@@ -48,10 +48,11 @@ function main() {
       continue;
     }
 
-    // Read file bytes and convert to UTF-8 string
+    // Read file as binary (latin1) to preserve raw bytes like Go's string([]byte)
+    // Note: utf8 encoding would replace invalid sequences with U+FFFD replacement char
     let content;
     try {
-      content = fs.readFileSync(realPath, 'utf8');
+      content = fs.readFileSync(realPath, 'latin1');
     } catch (err) {
       console.error(`Failed to read file "${realPath}": ${err.message}`);
       continue;
@@ -60,10 +61,14 @@ function main() {
     // Run cleaning pipeline
     const cleanedContent = cleanSessionContent(content);
 
-    // Write output file
+    // Write output file with input length header for live recording detection
+    // Format: "{input_length} bytes\n{cleaned_content}"
+    // Write header and content separately to avoid any concatenation issues
     const outputPath = path.join(OUTPUT_DIR, file + '.js.output');
+    const header = `${content.length} bytes\n`;
     try {
-      fs.writeFileSync(outputPath, cleanedContent, 'utf8');
+      fs.writeFileSync(outputPath, header, 'utf8');  // header is ASCII, utf8 is fine
+      fs.appendFileSync(outputPath, cleanedContent, 'latin1');  // content as raw bytes
     } catch (err) {
       console.error(`Failed to write output file "${outputPath}": ${err.message}`);
       continue;

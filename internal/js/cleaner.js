@@ -5,7 +5,9 @@
  */
 
 // Clear sequence separator - must match Go's ClearSeparator in clear.go:9
-const CLEAR_SEPARATOR = '\n\n──────── terminal cleared ────────\n\n';
+// Using raw UTF-8 bytes for '─' (U+2500) = 0xe2 0x94 0x80 to ensure byte-level parity with Go
+// when processing files as latin1 (raw bytes)
+const CLEAR_SEPARATOR = '\n\n\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80 terminal cleared \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\n\n';
 
 // Clear sequence pattern - must match Go's clearPattern in clear.go:16
 // Matches: \x1b[H\x1b[2J, \x1b[H\x1b[3J, \x1b[2J\x1b[H, \x1b[3J\x1b[H, \x1b[2J, \x1b[3J
