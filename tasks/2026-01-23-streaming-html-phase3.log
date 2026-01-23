@@ -1,0 +1,3 @@
+090733 STARTING Phase 3 Step 1: Create test server
+       WILL DO: Create internal/html/testserver_test.go with server on port 3000
+       EXPECT: Test server serves streaming HTML at / and session.log at /session.log
