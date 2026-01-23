@@ -81,6 +81,10 @@ record-tui can be imported as a Go library for generating HTML from terminal rec
 go get github.com/choonkeat/record-tui@latest
 ```
 
+### Embedded Mode (Default)
+
+Best for small recordings (< 1MB). The HTML is self-contained and works offline:
+
 ```go
 package main
 
@@ -109,6 +113,42 @@ func main() {
     os.WriteFile("output.html", []byte(html), 0644)
 }
 ```
+
+### Streaming Mode
+
+Best for large recordings (multi-megabyte). The HTML fetches session data separately and renders progressively:
+
+```go
+package main
+
+import (
+    "os"
+
+    "github.com/choonkeat/record-tui/playback"
+)
+
+func main() {
+    // Generate lightweight HTML shell that streams from a URL
+    html, _ := playback.RenderStreamingHTML(playback.StreamingOptions{
+        Title:   "My Session",
+        DataURL: "./session.log", // URL to fetch session data from
+    })
+    os.WriteFile("output.html", []byte(html), 0644)
+
+    // Serve both files via HTTP:
+    // - output.html at /
+    // - session.log at /session.log
+}
+```
+
+**Note:** Streaming mode requires HTTP(S) — won't work with `file://` URLs. The JavaScript handles header/footer stripping and ANSI processing on the fly.
+
+### When to use each mode
+
+| Mode | File Size | Offline Support | Requires Server |
+|------|-----------|-----------------|-----------------|
+| Embedded (`RenderHTML`) | < 1MB | Yes | No |
+| Streaming (`RenderStreamingHTML`) | Any | No | Yes |
 
 Supports both macOS and Linux `script` command output formats.
 
