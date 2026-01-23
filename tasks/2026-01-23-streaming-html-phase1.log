@@ -13,3 +13,13 @@
             - Loading indicator that hides on first write
             - resizeToFitContent() for dimension handling after streaming
        STATUS: Ready for browser verification
+
+085911 STARTING Phase 1 Verification: Manual browser test
+       WILL DO: Start Python HTTP server on port 3000, serve public/streaming-test.html and sample.log
+       EXPECT: 
+         - Browser shows "Loading..." initially
+         - Content renders progressively (not all at once)
+         - Header lines ("Script started on...") don't appear in output
+         - Footer lines ("Script done on...") don't appear in output  
+         - Clear sequences show separator (not actual clear)
+         - No JavaScript console errors
