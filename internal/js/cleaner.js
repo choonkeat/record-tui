@@ -144,6 +144,197 @@ function cleanSessionContent(text) {
   return content;
 }
 
+/**
+ * Create a streaming cleaner for processing chunked data.
+ * Produces identical output to cleanSessionContent() but processes data incrementally.
+ *
+ * @param {function(string): void} onOutput - Callback invoked with cleaned chunks
+ * @returns {{write: function(string): void, end: function(): void}}
+ *
+ * Usage:
+ *   const cleaner = createStreamingCleaner((chunk) => process.stdout.write(chunk));
+ *   cleaner.write(chunk1);
+ *   cleaner.write(chunk2);
+ *   cleaner.end();
+ */
+function createStreamingCleaner(onOutput) {
+  // Header state - buffer first few lines to detect and strip header
+  let headerBuffer = '';
+  let headerStripped = false;
+  const HEADER_LINES_THRESHOLD = 5;
+
+  // Clear sequence state - track whether we need to emit separator before next content
+  let hasEmittedContent = false;
+  let pendingSeparator = false;
+
+  // Buffer for whitespace that follows a clear sequence
+  // This whitespace should be prepended to the next non-empty content (after the separator)
+  let pendingWhitespace = '';
+
+  // Buffer for incomplete escape sequences at chunk boundaries
+  let escapeBuffer = '';
+
+  // Trailing buffer for footer detection
+  let trailingBuffer = '';
+  const TRAILING_SIZE = 500;
+
+  /**
+   * Process text for clear sequences, respecting streaming state.
+   * Updates hasEmittedContent and pendingSeparator as side effects.
+   */
+  function processForClears(text) {
+    if (!text) return '';
+
+    clearPattern.lastIndex = 0;
+    const matches = [];
+    let m;
+    while ((m = clearPattern.exec(text)) !== null) {
+      matches.push([m.index, m.index + m[0].length]);
+    }
+
+    if (matches.length === 0) {
+      // No clears - check if we need to emit pending separator
+      if (text.trim() !== '') {
+        if (pendingSeparator) {
+          // Emit separator, any pending whitespace, then this content
+          const result = CLEAR_SEPARATOR + pendingWhitespace + text;
+          pendingSeparator = false;
+          pendingWhitespace = '';
+          hasEmittedContent = true;
+          return result;
+        }
+        hasEmittedContent = true;
+        return text;
+      }
+      // Text is whitespace-only
+      if (pendingSeparator) {
+        // Buffer whitespace to prepend after separator when we see non-empty content
+        pendingWhitespace += text;
+        return '';
+      }
+      return text;
+    }
+
+    let result = '';
+    let lastEnd = 0;
+
+    for (const [start, end] of matches) {
+      const before = text.slice(lastEnd, start);
+
+      if (before.trim() !== '') {
+        if (pendingSeparator) {
+          result += CLEAR_SEPARATOR + pendingWhitespace;
+          pendingSeparator = false;
+          pendingWhitespace = '';
+        }
+        result += before;
+        hasEmittedContent = true;
+      } else if (pendingSeparator) {
+        // Whitespace-only before a clear - buffer it
+        pendingWhitespace += before;
+      }
+
+      // After seeing a clear, if we had content before, we might need separator
+      if (hasEmittedContent) {
+        pendingSeparator = true;
+        // Note: don't reset pendingWhitespace here - it will be reset when emitted
+      }
+
+      lastEnd = end;
+    }
+
+    // Handle remaining after last clear
+    const remaining = text.slice(lastEnd);
+    if (remaining.trim() !== '') {
+      if (pendingSeparator) {
+        result += CLEAR_SEPARATOR + pendingWhitespace;
+        pendingSeparator = false;
+        pendingWhitespace = '';
+      }
+      result += remaining;
+      hasEmittedContent = true;
+    } else if (remaining && pendingSeparator) {
+      // Whitespace-only after the last clear - buffer it for next chunk
+      pendingWhitespace += remaining;
+    }
+
+    return result;
+  }
+
+  /**
+   * Feed a chunk of data to the cleaner.
+   * May invoke onOutput zero or more times.
+   */
+  function write(chunk) {
+    // Prepend any buffered incomplete escape sequence
+    let text = escapeBuffer + chunk;
+    escapeBuffer = '';
+
+    // Check for incomplete escape sequence at end (escape sequences are typically <10 bytes)
+    const lastEsc = text.lastIndexOf('\x1b');
+    if (lastEsc >= 0 && lastEsc > text.length - 10) {
+      // Might be incomplete, buffer it for next chunk
+      escapeBuffer = text.slice(lastEsc);
+      text = text.slice(0, lastEsc);
+    }
+
+    // Handle header - buffer until we have enough lines
+    if (!headerStripped) {
+      headerBuffer += text;
+      text = '';
+
+      // Count newlines to determine if we have enough for header detection
+      const newlineCount = (headerBuffer.match(/\n/g) || []).length;
+      if (newlineCount >= HEADER_LINES_THRESHOLD) {
+        headerBuffer = stripHeader(headerBuffer);
+        headerStripped = true;
+        text = headerBuffer;
+        headerBuffer = '';
+      } else {
+        return; // Need more data for header detection
+      }
+    }
+
+    // Add to trailing buffer
+    text = trailingBuffer + text;
+    trailingBuffer = '';
+
+    // Keep trailing portion for footer detection at end
+    if (text.length > TRAILING_SIZE) {
+      const toEmit = text.slice(0, -TRAILING_SIZE);
+      trailingBuffer = text.slice(-TRAILING_SIZE);
+      const processed = processForClears(toEmit);
+      if (processed) onOutput(processed);
+    } else {
+      trailingBuffer = text;
+    }
+  }
+
+  /**
+   * Signal end of stream. Processes remaining buffered data.
+   * Must be called to flush final content.
+   */
+  function end() {
+    // Combine all remaining buffers
+    let text = trailingBuffer + escapeBuffer;
+
+    // If header wasn't stripped yet (very small input), strip it now
+    if (!headerStripped) {
+      text = headerBuffer + text;
+      text = stripHeader(text);
+    }
+
+    // Strip footer from final content
+    text = stripFooter(text);
+
+    // Process for clears and emit
+    const processed = processForClears(text);
+    if (processed) onOutput(processed);
+  }
+
+  return { write, end };
+}
+
 // Export for Node.js (CommonJS)
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
@@ -152,7 +343,8 @@ if (typeof module !== 'undefined' && module.exports) {
     stripHeader,
     stripFooter,
     neutralizeClearSequences,
-    cleanSessionContent
+    cleanSessionContent,
+    createStreamingCleaner
   };
 }
 
