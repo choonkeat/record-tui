@@ -8,3 +8,29 @@ Will be done:
 6. Run make test to verify
 
 Expected: Code cleanup without breaking functionality
+
+075000: Removed orphaned code
+Removed:
+- neutralizeClearSequences() - was only called by cleanSessionContent()
+- cleanSessionContent() - batch entry point, no longer needed
+
+Kept:
+- CLEAR_SEPARATOR - used by streaming
+- clearPattern - used by streaming
+- stripHeader() - used by streaming
+- stripFooter() - used by streaming
+- createStreamingCleaner() - the new primary API
+
+Updated exports to only export kept functions.
+
+075010: Updated self-tests
+- Removed tests for neutralizeClearSequences() and cleanSessionContent()
+- Updated streaming tests to verify against known expected values
+- Added verifyChunkIndependence() helper to test multiple chunk sizes
+- 8 streaming tests verify consistent behavior regardless of chunking
+
+075041: All tests pass
+- node cleaner.js: 10 tests PASS (2 helper + 8 streaming)
+- make test: 7 matches, 0 mismatches
+
+Conclusion: Phase 5 complete - orphaned code removed, cleaner.js is now streaming-only
