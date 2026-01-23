@@ -99,12 +99,12 @@ Create browser-side streaming logic with header/footer stripping and clear seque
 
 ### Verification
 
-- [ ] Manual browser test: serve `sample.log` on port 3000, open test harness
-- [ ] Content renders progressively (not all at once)
-- [ ] Header lines don't appear in output
-- [ ] Footer lines don't appear in output
-- [ ] Clear sequences show separator (not actual clear)
-- [ ] No JavaScript console errors
+- [x] Manual browser test: serve `sample.log` on port 3000, open test harness
+- [x] Content renders progressively (not all at once)
+- [x] Header lines don't appear in output
+- [x] Footer lines don't appear in output
+- [x] Clear sequences show separator (not actual clear) — verified with synthetic test; sample.log clears have whitespace before them
+- [x] No JavaScript console errors — only favicon.ico 404 (expected)
 
 ---
 
