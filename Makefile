@@ -1,4 +1,4 @@
-.PHONY: build build-all clean test test-go test-js compare-output install info install-pdf-tool
+.PHONY: build build-all clean clean-compare-output test test-go test-js compare-output install info install-pdf-tool
 
 # Build record-tui binary
 build:
@@ -10,8 +10,12 @@ build-all: build
 	GOOS=darwin GOARCH=amd64 go build -o bin/record-tui-darwin-amd64 ./cmd/record-tui
 	GOOS=linux GOARCH=amd64 go build -o bin/record-tui-linux-amd64 ./cmd/record-tui
 
-# Run all tests (Go tests, JS output generation, then compare)
-test: test-go test-js compare-output
+# Clean comparison output files (ensures fresh comparison)
+clean-compare-output:
+	rm -rf ./recordings-output/
+
+# Run all tests (clean, Go tests, JS output generation, then compare)
+test: clean-compare-output test-go test-js compare-output
 
 # Run Go tests (generates .go.output files in recordings-output/)
 test-go:
