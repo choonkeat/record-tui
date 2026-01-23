@@ -7,7 +7,41 @@
 
 const fs = require('fs');
 const path = require('path');
-const { cleanSessionContent } = require('./cleaner.js');
+const { createStreamingCleaner } = require('./cleaner.js');
+
+// Seeded PRNG for reproducible random chunk sizes
+// Allow reproducible runs via SEED env var
+const seed = process.env.SEED ? parseInt(process.env.SEED) : Date.now();
+console.log(`Random seed: ${seed} (reproduce with: SEED=${seed} make test)`);
+
+let rngState = seed;
+function random() {
+  rngState = (rngState * 1103515245 + 12345) & 0x7fffffff;
+  return rngState / 0x7fffffff;
+}
+
+function getRandomChunkSize() {
+  return Math.floor(random() * (16384 - 64)) + 64;  // 64 bytes to 16KB
+}
+
+/**
+ * Process content using streaming cleaner with random chunk sizes.
+ * This proves the streaming API produces identical output regardless of chunking.
+ */
+function processWithStreaming(content) {
+  const chunks = [];
+  const cleaner = createStreamingCleaner((c) => chunks.push(c));
+
+  let offset = 0;
+  while (offset < content.length) {
+    const size = getRandomChunkSize();
+    cleaner.write(content.slice(offset, offset + size));
+    offset += size;
+  }
+  cleaner.end();
+
+  return chunks.join('');
+}
 
 const RECORDINGS_DIR = './recordings';
 const OUTPUT_DIR = './recordings-output';
@@ -58,8 +92,8 @@ function main() {
       continue;
     }
 
-    // Run cleaning pipeline
-    const cleanedContent = cleanSessionContent(content);
+    // Run cleaning pipeline using streaming with random chunks
+    const cleanedContent = processWithStreaming(content);
 
     // Write output file with input length header for live recording detection
     // Format: "{input_length} bytes\n{cleaned_content}"
