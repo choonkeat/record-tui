@@ -15,3 +15,26 @@ JS: "                \r\n.[38;5;174m .." (16 spaces then CRLF and content)
 This indicates the streaming cleaner is not preserving the full line content.
 Looking at the code, the issue is likely in how trailing buffer content is processed
 when it contains whitespace-only content that should NOT trigger pendingSeparator.
+
+074430: Root cause identified
+Problem: When pendingSeparator=true and whitespace-only content arrives, it was being
+emitted immediately. But in batch mode, whitespace AFTER a clear is prepended to the
+next non-empty content (along with the separator).
+
+Fix: Added pendingWhitespace buffer to accumulate whitespace that follows a clear.
+When non-empty content arrives with pendingSeparator=true, emit:
+  SEPARATOR + pendingWhitespace + content
+
+Modified processForClears() in cleaner.js:
+- Added pendingWhitespace state variable
+- When no clears and whitespace-only with pendingSeparator: buffer it, return ''
+- When content with pendingSeparator: emit SEPARATOR + pendingWhitespace + content
+- Same handling in the loop for content between clears
+
+074641: Ran make test
+Result: PASS
+- 7 matches, 0 mismatches, 1 live recording skipped
+- All output files are byte-identical to Go output
+- Random chunk sizes (64B-16KB) verified correct behavior
+
+Conclusion: Phase 3 complete (Green phase) - streaming produces identical output to batch
