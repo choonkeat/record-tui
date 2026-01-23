@@ -15,3 +15,7 @@
        OBSERVED: Created streaming HTML template with embedded JavaScript
        GOT: File compiles successfully with go build ./internal/html/...
        STATUS: Step 2 complete
+
+090514 STARTING Phase 2 Step 3: Add RenderStreamingHTML() to playback/playback.go
+       WILL DO: Add public function that calls internal template renderer
+       EXPECT: New function RenderStreamingHTML(StreamingOptions) in playback package
