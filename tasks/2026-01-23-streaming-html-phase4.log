@@ -1,3 +1,16 @@
 091119 STARTING Phase 4 Step 1: Add loading indicator to embedded HTML template
        WILL DO: Modify internal/html/template.go to show "Loading..." before base64 parsing
        EXPECT: Loading indicator visible before heavy JS processing
+
+091222 COMPLETED Phase 4 Step 1: Add loading indicator to embedded HTML template
+       OBSERVED: Modified internal/html/template.go to add loading div and hide it before xterm.write
+       GOT: 
+         - Added #loading CSS styles
+         - Added <div id="loading">Loading...</div> before terminal div
+         - Added document.getElementById('loading').style.display = 'none' before xterm.write
+         - New test TestRenderPlaybackHTML_ContainsLoadingIndicator passes
+       STATUS: Step 1 complete
+
+091222 STARTING Phase 4 Step 2: Update README.md
+       WILL DO: Document RenderStreamingHTML() in Library Usage section
+       EXPECT: README explains both modes with code examples
