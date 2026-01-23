@@ -115,7 +115,7 @@ Add `RenderStreamingHTML()` function to the `playback` package.
 
 ### Steps
 
-1. **Add `StreamingOptions` to `playback/types.go`**
+1. [x] **Add `StreamingOptions` to `playback/types.go`**
    ```go
    type StreamingOptions struct {
        Title      string     // Page title (defaults to "Terminal")
@@ -124,13 +124,13 @@ Add `RenderStreamingHTML()` function to the `playback` package.
    }
    ```
 
-2. **Create `internal/html/template_streaming.go`**
+2. [x] **Create `internal/html/template_streaming.go`**
    - HTML shell matching current styling
    - Embedded streaming JavaScript from Phase 1
    - Template substitution for title, dataURL, footer
    - Loading indicator div
 
-3. **Add `RenderStreamingHTML()` to `playback/playback.go`**
+3. [x] **Add `RenderStreamingHTML()` to `playback/playback.go`**
    ```go
    func RenderStreamingHTML(opts StreamingOptions) (string, error) {
        // Validate DataURL is provided
@@ -139,17 +139,17 @@ Add `RenderStreamingHTML()` function to the `playback` package.
    }
    ```
 
-4. **Add unit tests in `playback/playback_test.go`**
+4. [x] **Add unit tests in `playback/playback_test.go`**
    - Test with various options
    - Test default values
    - Test special character escaping in title/URL
 
 ### Verification
 
-- [ ] `go test ./playback/...` passes
-- [ ] `go test ./internal/...` passes
-- [ ] Existing `RenderHTML()` tests still pass (no regression)
-- [ ] Generated HTML contains correct title, dataURL, JavaScript
+- [x] `go test ./playback/...` passes (19 tests)
+- [x] `go test ./internal/...` passes (no regression)
+- [x] Existing `RenderHTML()` tests still pass (no regression)
+- [x] Generated HTML contains correct title, dataURL, JavaScript
 
 ---
 
