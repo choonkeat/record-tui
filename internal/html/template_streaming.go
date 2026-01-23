@@ -281,11 +281,13 @@ func RenderStreamingPlaybackHTML(opts StreamingOptions) (string, error) {
 
     // Main initialization
     async function main() {
-      // Initialize xterm with reasonable defaults
+      // Initialize xterm with large defaults (will resize down after streaming)
+      // Use 240 cols to match embedded template's max width cap
+      const COLS = 240;
       const terminalDiv = document.getElementById('terminal');
       const xterm = new Terminal({
-        cols: 120,
-        rows: 50,
+        cols: COLS,
+        rows: 1000, // Large initial value, will resize down after streaming
         fontSize: 15,
         cursorBlink: false,
         disableStdin: true,
@@ -308,7 +310,7 @@ func RenderStreamingPlaybackHTML(opts StreamingOptions) (string, error) {
 
         // Resize to fit content after streaming completes
         setTimeout(function() {
-          resizeToFitContent(xterm, 120);
+          resizeToFitContent(xterm, COLS);
         }, 100);
       } catch (err) {
         console.error('Streaming error:', err);
