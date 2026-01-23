@@ -6,3 +6,29 @@ Will be done:
 4. Run node cleaner.js to execute self-tests
 
 Expected: All streaming self-tests pass
+
+074745: Added streaming tests
+Added 10 test cases comparing streaming vs batch:
+1. Basic streaming - large chunk
+2. Byte-by-byte - 1 byte chunks (stress test)
+3. Clear at chunk boundary
+4. Multiple clears
+5. Clear at start
+6. Clear at end
+7. Whitespace after clear
+8. Whitespace between clears
+9. With header/footer
+10. Large chunks
+
+074750: First run found bug
+Test 8 "whitespace between clears" FAILED
+Issue: pendingWhitespace before a clear should be discarded, not kept
+
+Fix: When setting pendingSeparator=true after a clear, also reset pendingWhitespace=''
+(because whitespace-only content before a clear is dropped in batch mode)
+
+074829: All tests pass
+- node cleaner.js: all 15 tests PASS (5 batch + 10 streaming)
+- make test: 7 matches, 0 mismatches
+
+Conclusion: Phase 4 complete - streaming self-tests verify parity with batch

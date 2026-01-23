@@ -237,7 +237,9 @@ function createStreamingCleaner(onOutput) {
       // After seeing a clear, if we had content before, we might need separator
       if (hasEmittedContent) {
         pendingSeparator = true;
-        // Note: don't reset pendingWhitespace here - it will be reset when emitted
+        // Discard any pending whitespace - it was before this clear, so should be dropped
+        // (batch logic: whitespace-only content before a clear is not included)
+        pendingWhitespace = '';
       }
 
       lastEnd = end;
@@ -378,5 +380,63 @@ if (typeof require !== 'undefined' && require.main === module) {
   const clearEndResult = neutralizeClearSequences(clearEndTest);
   console.log('neutralizeClearSequences (end) test:', clearEndResult === 'before' ? 'PASS' : 'FAIL');
 
-  console.log('Self-test complete.');
+  // === Streaming Tests ===
+  console.log('\nRunning streaming cleaner tests...');
+
+  // Helper: process with streaming at given chunk size
+  function testStreaming(input, chunkSize, testName) {
+    const chunks = [];
+    const cleaner = createStreamingCleaner((c) => chunks.push(c));
+    for (let i = 0; i < input.length; i += chunkSize) {
+      cleaner.write(input.slice(i, i + chunkSize));
+    }
+    cleaner.end();
+    return chunks.join('');
+  }
+
+  // Helper: compare streaming vs batch
+  function compareStreamingVsBatch(input, chunkSize, testName) {
+    const batchResult = cleanSessionContent(input);
+    const streamResult = testStreaming(input, chunkSize, testName);
+    const pass = batchResult === streamResult;
+    console.log(`${testName}: ${pass ? 'PASS' : 'FAIL'}`);
+    if (!pass) {
+      console.log(`  Expected (${batchResult.length} bytes): ${JSON.stringify(batchResult.slice(0, 100))}...`);
+      console.log(`  Got (${streamResult.length} bytes): ${JSON.stringify(streamResult.slice(0, 100))}...`);
+    }
+    return pass;
+  }
+
+  // Test 1: Basic streaming matches batch
+  compareStreamingVsBatch('before\x1b[2Jafter', 1024, 'streaming basic');
+
+  // Test 2: Byte-by-byte (stress test)
+  compareStreamingVsBatch('before\x1b[2Jafter', 1, 'streaming byte-by-byte');
+
+  // Test 3: Clear at chunk boundary
+  compareStreamingVsBatch('content\x1b[2Jmore', 7, 'streaming clear at boundary');
+
+  // Test 4: Multiple clears
+  compareStreamingVsBatch('a\x1b[2Jb\x1b[2Jc', 1, 'streaming multiple clears');
+
+  // Test 5: Clear at start (no separator)
+  compareStreamingVsBatch('\x1b[2Jcontent', 1, 'streaming clear at start');
+
+  // Test 6: Clear at end (no separator)
+  compareStreamingVsBatch('content\x1b[2J', 1, 'streaming clear at end');
+
+  // Test 7: Whitespace after clear
+  compareStreamingVsBatch('before\x1b[2J   after', 5, 'streaming whitespace after clear');
+
+  // Test 8: Only whitespace between clears
+  compareStreamingVsBatch('a\x1b[2J   \x1b[2Jb', 3, 'streaming whitespace between clears');
+
+  // Test 9: With header/footer
+  const fullInput = 'Script started on Wed Dec 31 12:10:34 2025\nCommand: bash\nhello\x1b[2Jworld\n\nScript done on Wed Dec 31 12:11:22 2025';
+  compareStreamingVsBatch(fullInput, 10, 'streaming with header/footer');
+
+  // Test 10: Large chunks (approaching batch)
+  compareStreamingVsBatch('before\x1b[2Jafter', 10000, 'streaming large chunks');
+
+  console.log('\nSelf-test complete.');
 }
