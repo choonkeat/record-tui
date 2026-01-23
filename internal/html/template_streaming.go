@@ -101,94 +101,172 @@ func RenderStreamingPlaybackHTML(opts StreamingOptions) (string, error) {
     // Data URL to fetch session content from
     const DATA_URL = '` + escapedDataURL + `';
 
-    // Clear sequence separator
-    // Using \r\n ensures cursor is at column 0 after separator, reducing chance of overwrite
-    const CLEAR_SEPARATOR = '\r\n\r\n──────── terminal cleared ────────\r\n\r\n';
+    // ============================================================
+    // Streaming cleaner - same logic as internal/js/cleaner.js
+    // ============================================================
 
-    // Clear sequence pattern (matches Go implementation)
-    // Matches: \x1b[H\x1b[2J, \x1b[H\x1b[3J, \x1b[2J\x1b[H, \x1b[3J\x1b[H, \x1b[2J, \x1b[3J
+    // Clear sequence separator - must match Go's ClearSeparator in clear.go:9
+    // Using raw UTF-8 bytes for '─' (U+2500) = 0xe2 0x94 0x80
+    const CLEAR_SEPARATOR = '\n\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 terminal cleared \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\n';
+
+    // Clear sequence pattern - matches Go's clearPattern in clear.go:16
     const clearPattern = /\x1b\[H\x1b\[[23]J|\x1b\[[23]J\x1b\[H|\x1b\[[23]J/g;
 
-    /**
-     * Strip header lines from session content.
-     * Matches Go's StripMetadata in internal/session/cleaner.go:
-     * removes first ~5 lines starting with "Script started on" or "Command:"
-     */
     function stripHeader(text) {
       const lines = text.split('\n');
       let startIndex = 0;
-
-      // Find where actual content starts (skip header)
       for (let i = 0; i < lines.length && i < 5; i++) {
         const line = lines[i];
         if (line.startsWith('Script started on') || line.startsWith('Command:')) {
           startIndex = i + 1;
         }
       }
-
-      if (startIndex === 0) {
-        return text; // No header found
-      }
-
+      if (startIndex === 0) return text;
       return lines.slice(startIndex).join('\n');
     }
 
-    /**
-     * Strip footer lines from session content.
-     * Matches Go's StripMetadata in internal/session/cleaner.go:
-     * removes trailing lines containing "Saving session", "Script done on", "Command exit status"
-     */
     function stripFooter(text) {
       const lines = text.split('\n');
-      let endIndex = lines.length;
-
-      // Find where actual content ends (skip footer)
-      // Work backwards from end
       let footerStartIndex = lines.length;
       for (let i = lines.length - 1; i >= 0; i--) {
         const line = lines[i];
         if (line.includes('Saving session') ||
             line.includes('Command exit status') ||
             line.includes('Script done on') ||
-            line.trim() === '') {
+            (line.trim() === '' && i > 0)) {
           footerStartIndex = i;
         } else if (footerStartIndex < lines.length) {
-          // Found content before footer, stop
           break;
         }
       }
-      endIndex = footerStartIndex;
-
-      // Trim trailing empty lines
-      while (endIndex > 0 && lines[endIndex - 1].trim() === '') {
-        endIndex--;
-      }
-
-      if (endIndex >= lines.length) {
-        return text; // No footer found
-      }
-
+      let endIndex = footerStartIndex;
+      while (endIndex > 0 && lines[endIndex - 1].trim() === '') endIndex--;
+      if (endIndex >= lines.length) return text;
       return lines.slice(0, endIndex).join('\n');
     }
 
-    /**
-     * Neutralize clear sequences by replacing them with visible separator.
-     * Matches Go's NeutralizeClearSequences in internal/session/clear.go.
-     */
-    function neutralizeClearSequences(text) {
-      return text.replace(clearPattern, CLEAR_SEPARATOR);
+    function createStreamingCleaner(onOutput) {
+      let headerBuffer = '';
+      let headerStripped = false;
+      const HEADER_LINES_THRESHOLD = 5;
+      let hasEmittedContent = false;
+      let pendingSeparator = false;
+      let pendingWhitespace = '';
+      let escapeBuffer = '';
+      let trailingBuffer = '';
+      const TRAILING_SIZE = 500;
+
+      function processForClears(text) {
+        if (!text) return '';
+        clearPattern.lastIndex = 0;
+        const matches = [];
+        let m;
+        while ((m = clearPattern.exec(text)) !== null) {
+          matches.push([m.index, m.index + m[0].length]);
+        }
+        if (matches.length === 0) {
+          if (text.trim() !== '') {
+            if (pendingSeparator) {
+              const result = CLEAR_SEPARATOR + pendingWhitespace + text;
+              pendingSeparator = false;
+              pendingWhitespace = '';
+              hasEmittedContent = true;
+              return result;
+            }
+            hasEmittedContent = true;
+            return text;
+          }
+          if (pendingSeparator) {
+            pendingWhitespace += text;
+            return '';
+          }
+          return text;
+        }
+        let result = '';
+        let lastEnd = 0;
+        for (const [start, end] of matches) {
+          const before = text.slice(lastEnd, start);
+          if (before.trim() !== '') {
+            if (pendingSeparator) {
+              result += CLEAR_SEPARATOR + pendingWhitespace;
+              pendingSeparator = false;
+              pendingWhitespace = '';
+            }
+            result += before;
+            hasEmittedContent = true;
+          } else if (pendingSeparator) {
+            pendingWhitespace += before;
+          }
+          if (hasEmittedContent) {
+            pendingSeparator = true;
+            pendingWhitespace = '';
+          }
+          lastEnd = end;
+        }
+        const remaining = text.slice(lastEnd);
+        if (remaining.trim() !== '') {
+          if (pendingSeparator) {
+            result += CLEAR_SEPARATOR + pendingWhitespace;
+            pendingSeparator = false;
+            pendingWhitespace = '';
+          }
+          result += remaining;
+          hasEmittedContent = true;
+        } else if (remaining && pendingSeparator) {
+          pendingWhitespace += remaining;
+        }
+        return result;
+      }
+
+      function write(chunk) {
+        let text = escapeBuffer + chunk;
+        escapeBuffer = '';
+        const lastEsc = text.lastIndexOf('\x1b');
+        if (lastEsc >= 0 && lastEsc > text.length - 10) {
+          escapeBuffer = text.slice(lastEsc);
+          text = text.slice(0, lastEsc);
+        }
+        if (!headerStripped) {
+          headerBuffer += text;
+          text = '';
+          const newlineCount = (headerBuffer.match(/\n/g) || []).length;
+          if (newlineCount >= HEADER_LINES_THRESHOLD) {
+            headerBuffer = stripHeader(headerBuffer);
+            headerStripped = true;
+            text = headerBuffer;
+            headerBuffer = '';
+          } else {
+            return;
+          }
+        }
+        text = trailingBuffer + text;
+        trailingBuffer = '';
+        if (text.length > TRAILING_SIZE) {
+          const toEmit = text.slice(0, -TRAILING_SIZE);
+          trailingBuffer = text.slice(-TRAILING_SIZE);
+          const processed = processForClears(toEmit);
+          if (processed) onOutput(processed);
+        } else {
+          trailingBuffer = text;
+        }
+      }
+
+      function end() {
+        let text = trailingBuffer + escapeBuffer;
+        if (!headerStripped) {
+          text = headerBuffer + text;
+          text = stripHeader(text);
+        }
+        text = stripFooter(text);
+        const processed = processForClears(text);
+        if (processed) onOutput(processed);
+      }
+
+      return { write, end };
     }
 
     /**
-     * Stream session data from URL to xterm.
-     * Handles header/footer stripping and clear sequence neutralization
-     * while streaming for progressive rendering.
-     *
-     * Design notes:
-     * - Uses trailing buffer (500 bytes) to handle footer detection without
-     *   prematurely writing footer content to terminal
-     * - Avoids splitting ANSI escape sequences by checking for incomplete
-     *   sequences at chunk boundaries (escape sequences start with \x1b)
+     * Stream session data from URL to xterm using streaming cleaner.
      */
     async function streamSession(url, xterm) {
       const response = await fetch(url);
@@ -198,58 +276,23 @@ func RenderStreamingPlaybackHTML(opts StreamingOptions) (string, error) {
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-
-      let buffer = '';
-      let headerStripped = false;
-      let firstWrite = true;
-      const TRAILING_SIZE = 500; // Buffer for footer detection
-
-      // Hide loading indicator on first write
       const loadingDiv = document.getElementById('loading');
+      let firstWrite = true;
+
+      const cleaner = createStreamingCleaner((chunk) => {
+        if (firstWrite) {
+          loadingDiv.style.display = 'none';
+          firstWrite = false;
+        }
+        xterm.write(chunk);
+      });
 
       while (true) {
         const result = await reader.read();
         if (result.done) break;
-
-        buffer += decoder.decode(result.value, { stream: true });
-
-        // Strip header once we have enough content
-        if (!headerStripped && buffer.includes('\n')) {
-          buffer = stripHeader(buffer);
-          headerStripped = true;
-        }
-
-        // Keep trailing buffer for footer detection, write the rest
-        if (buffer.length > TRAILING_SIZE) {
-          let toWrite = buffer.slice(0, -TRAILING_SIZE);
-          buffer = buffer.slice(-TRAILING_SIZE);
-
-          // Don't split escape sequences - find last \x1b
-          const lastEsc = toWrite.lastIndexOf('\x1b');
-          if (lastEsc > toWrite.length - 10 && lastEsc >= 0) {
-            buffer = toWrite.slice(lastEsc) + buffer;
-            toWrite = toWrite.slice(0, lastEsc);
-          }
-
-          if (toWrite) {
-            // Hide loading on first write
-            if (firstWrite) {
-              loadingDiv.style.display = 'none';
-              firstWrite = false;
-            }
-            xterm.write(neutralizeClearSequences(toWrite));
-          }
-        }
+        cleaner.write(decoder.decode(result.value, { stream: true }));
       }
-
-      // Final: strip footer, neutralize remaining buffer, write
-      const finalContent = neutralizeClearSequences(stripFooter(buffer));
-      if (finalContent) {
-        if (firstWrite) {
-          loadingDiv.style.display = 'none';
-        }
-        xterm.write(finalContent);
-      }
+      cleaner.end();
     }
 
     /**

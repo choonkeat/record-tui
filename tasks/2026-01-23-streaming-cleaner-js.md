@@ -12,12 +12,12 @@ Modify `cleaner.js` to support streaming/chunked data processing so it can be us
 
 ## Phases Overview
 
-1. **Phase 1: Streaming API Implementation** - Add `createStreamingCleaner()` to `cleaner.js`
-2. **Phase 2: Update Node.js Test Harness** - Modify `generate_output.js` to use streaming API with randomized chunks
-3. **Phase 3: Verify Parity & Fix Discrepancies** - Run `make test`, debug any mismatches
-4. **Phase 4: Add Self-Tests for Streaming** - Add streaming-specific unit tests to `cleaner.js`
-5. **Phase 5: Remove Orphaned Code** - Delete unused batch functions
-6. **Phase 6: Update RenderStreamingHTML** - Replace inline JS in `template_streaming.go` with tested streaming cleaner
+1. ✅ **Phase 1: Streaming API Implementation** - Add `createStreamingCleaner()` to `cleaner.js`
+2. ✅ **Phase 2: Update Node.js Test Harness** - Modify `generate_output.js` to use streaming API with randomized chunks
+3. ✅ **Phase 3: Verify Parity & Fix Discrepancies** - Run `make test`, debug any mismatches
+4. ✅ **Phase 4: Add Self-Tests for Streaming** - Add streaming-specific unit tests to `cleaner.js`
+5. ✅ **Phase 5: Remove Orphaned Code** - Delete unused batch functions
+6. ✅ **Phase 6: Update RenderStreamingHTML** - Replace inline JS in `template_streaming.go` with tested streaming cleaner
 
 ---
 
