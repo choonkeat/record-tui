@@ -6,3 +6,7 @@
        OBSERVED: Added StreamingOptions struct with Title, DataURL, FooterLink fields
        GOT: File compiles successfully with go build ./playback/...
        STATUS: Step 1 complete
+
+090402 STARTING Phase 2 Step 2: Create internal/html/template_streaming.go
+       WILL DO: Create streaming HTML template with embedded JavaScript from Phase 1
+       EXPECT: New file at internal/html/template_streaming.go with RenderStreamingPlaybackHTML function
