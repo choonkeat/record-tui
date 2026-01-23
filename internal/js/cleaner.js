@@ -79,74 +79,8 @@ function stripFooter(text) {
 }
 
 /**
- * Neutralize clear sequences by replacing them with visible separator.
- * Matches Go's clear.go:22-64 exactly (sophisticated logic).
- * Only adds separator if there's non-empty content before AND after the clear.
- */
-function neutralizeClearSequences(text) {
-  // Find all clear sequences
-  const matches = [];
-  let match;
-  // Reset lastIndex since we're reusing the regex
-  clearPattern.lastIndex = 0;
-  while ((match = clearPattern.exec(text)) !== null) {
-    matches.push([match.index, match.index + match[0].length]);
-  }
-
-  if (matches.length === 0) {
-    return text;
-  }
-
-  let result = '';
-  let lastEnd = 0;
-
-  for (const [start, end] of matches) {
-    // Get content before this clear
-    const before = text.slice(lastEnd, start);
-
-    // Only add separator if there's non-empty content before
-    if (before.trim() !== '') {
-      result += before;
-
-      // Check if there's content after this clear
-      const remaining = text.slice(end);
-      if (remaining.trim() !== '') {
-        result += CLEAR_SEPARATOR;
-      }
-    }
-
-    lastEnd = end;
-  }
-
-  // Add remaining content after the last clear
-  const remaining = text.slice(lastEnd);
-  if (remaining.trim() !== '') {
-    // If we haven't written anything yet (clears were at start), just write content
-    // (This matches Go's logic at clear.go:56-60)
-    result += remaining;
-  }
-
-  return result;
-}
-
-/**
- * Clean session content by stripping metadata and neutralizing clear sequences.
- * This is the main entry point that matches the Go pipeline.
- * Pipeline: text -> stripHeader -> stripFooter -> neutralizeClearSequences
- */
-function cleanSessionContent(text) {
-  // Step 1: Strip header
-  let content = stripHeader(text);
-  // Step 2: Strip footer
-  content = stripFooter(content);
-  // Step 3: Neutralize clear sequences
-  content = neutralizeClearSequences(content);
-  return content;
-}
-
-/**
  * Create a streaming cleaner for processing chunked data.
- * Produces identical output to cleanSessionContent() but processes data incrementally.
+ * Processes: stripHeader -> (streaming content with clear sequence handling) -> stripFooter
  *
  * @param {function(string): void} onOutput - Callback invoked with cleaned chunks
  * @returns {{write: function(string): void, end: function(): void}}
@@ -344,8 +278,6 @@ if (typeof module !== 'undefined' && module.exports) {
     clearPattern,
     stripHeader,
     stripFooter,
-    neutralizeClearSequences,
-    cleanSessionContent,
     createStreamingCleaner
   };
 }
@@ -364,27 +296,11 @@ if (typeof require !== 'undefined' && require.main === module) {
   const footerResult = stripFooter(footerTest);
   console.log('stripFooter test:', footerResult === 'hello world' ? 'PASS' : 'FAIL');
 
-  // Test neutralizeClearSequences
-  const clearTest = 'before\x1b[2Jafter';
-  const clearResult = neutralizeClearSequences(clearTest);
-  const expectedClear = 'before' + CLEAR_SEPARATOR + 'after';
-  console.log('neutralizeClearSequences test:', clearResult === expectedClear ? 'PASS' : 'FAIL');
-
-  // Test clear at start (no separator should be added)
-  const clearStartTest = '\x1b[2Jafter';
-  const clearStartResult = neutralizeClearSequences(clearStartTest);
-  console.log('neutralizeClearSequences (start) test:', clearStartResult === 'after' ? 'PASS' : 'FAIL');
-
-  // Test clear at end (no separator should be added)
-  const clearEndTest = 'before\x1b[2J';
-  const clearEndResult = neutralizeClearSequences(clearEndTest);
-  console.log('neutralizeClearSequences (end) test:', clearEndResult === 'before' ? 'PASS' : 'FAIL');
-
   // === Streaming Tests ===
   console.log('\nRunning streaming cleaner tests...');
 
   // Helper: process with streaming at given chunk size
-  function testStreaming(input, chunkSize, testName) {
+  function testStreaming(input, chunkSize) {
     const chunks = [];
     const cleaner = createStreamingCleaner((c) => chunks.push(c));
     for (let i = 0; i < input.length; i += chunkSize) {
@@ -394,49 +310,90 @@ if (typeof require !== 'undefined' && require.main === module) {
     return chunks.join('');
   }
 
-  // Helper: compare streaming vs batch
-  function compareStreamingVsBatch(input, chunkSize, testName) {
-    const batchResult = cleanSessionContent(input);
-    const streamResult = testStreaming(input, chunkSize, testName);
-    const pass = batchResult === streamResult;
+  // Helper: verify streaming output matches expected
+  function verifyStreaming(input, chunkSize, expected, testName) {
+    const result = testStreaming(input, chunkSize);
+    const pass = result === expected;
     console.log(`${testName}: ${pass ? 'PASS' : 'FAIL'}`);
     if (!pass) {
-      console.log(`  Expected (${batchResult.length} bytes): ${JSON.stringify(batchResult.slice(0, 100))}...`);
-      console.log(`  Got (${streamResult.length} bytes): ${JSON.stringify(streamResult.slice(0, 100))}...`);
+      console.log(`  Expected (${expected.length} bytes): ${JSON.stringify(expected.slice(0, 100))}...`);
+      console.log(`  Got (${result.length} bytes): ${JSON.stringify(result.slice(0, 100))}...`);
     }
     return pass;
   }
 
-  // Test 1: Basic streaming matches batch
-  compareStreamingVsBatch('before\x1b[2Jafter', 1024, 'streaming basic');
+  // Helper: verify same result with different chunk sizes
+  function verifyChunkIndependence(input, expected, testName) {
+    const result1 = testStreaming(input, 1);      // byte-by-byte
+    const result2 = testStreaming(input, 7);      // small chunks
+    const result3 = testStreaming(input, 1024);   // large chunks
+    const pass = result1 === expected && result2 === expected && result3 === expected;
+    console.log(`${testName}: ${pass ? 'PASS' : 'FAIL'}`);
+    if (!pass) {
+      console.log(`  Expected: ${JSON.stringify(expected.slice(0, 50))}...`);
+      console.log(`  Chunk 1: ${JSON.stringify(result1.slice(0, 50))}...`);
+      console.log(`  Chunk 7: ${JSON.stringify(result2.slice(0, 50))}...`);
+      console.log(`  Chunk 1024: ${JSON.stringify(result3.slice(0, 50))}...`);
+    }
+    return pass;
+  }
 
-  // Test 2: Byte-by-byte (stress test)
-  compareStreamingVsBatch('before\x1b[2Jafter', 1, 'streaming byte-by-byte');
+  // Test 1: Basic clear sequence
+  verifyChunkIndependence(
+    'before\x1b[2Jafter',
+    'before' + CLEAR_SEPARATOR + 'after',
+    'streaming basic clear'
+  );
 
-  // Test 3: Clear at chunk boundary
-  compareStreamingVsBatch('content\x1b[2Jmore', 7, 'streaming clear at boundary');
+  // Test 2: Clear at start (no separator)
+  verifyChunkIndependence(
+    '\x1b[2Jcontent',
+    'content',
+    'streaming clear at start'
+  );
+
+  // Test 3: Clear at end (no separator)
+  verifyChunkIndependence(
+    'content\x1b[2J',
+    'content',
+    'streaming clear at end'
+  );
 
   // Test 4: Multiple clears
-  compareStreamingVsBatch('a\x1b[2Jb\x1b[2Jc', 1, 'streaming multiple clears');
+  verifyChunkIndependence(
+    'a\x1b[2Jb\x1b[2Jc',
+    'a' + CLEAR_SEPARATOR + 'b' + CLEAR_SEPARATOR + 'c',
+    'streaming multiple clears'
+  );
 
-  // Test 5: Clear at start (no separator)
-  compareStreamingVsBatch('\x1b[2Jcontent', 1, 'streaming clear at start');
+  // Test 5: Whitespace after clear preserved
+  verifyChunkIndependence(
+    'before\x1b[2J   after',
+    'before' + CLEAR_SEPARATOR + '   after',
+    'streaming whitespace after clear'
+  );
 
-  // Test 6: Clear at end (no separator)
-  compareStreamingVsBatch('content\x1b[2J', 1, 'streaming clear at end');
+  // Test 6: Whitespace between clears discarded
+  verifyChunkIndependence(
+    'a\x1b[2J   \x1b[2Jb',
+    'a' + CLEAR_SEPARATOR + 'b',
+    'streaming whitespace between clears'
+  );
 
-  // Test 7: Whitespace after clear
-  compareStreamingVsBatch('before\x1b[2J   after', 5, 'streaming whitespace after clear');
-
-  // Test 8: Only whitespace between clears
-  compareStreamingVsBatch('a\x1b[2J   \x1b[2Jb', 3, 'streaming whitespace between clears');
-
-  // Test 9: With header/footer
+  // Test 7: With header/footer
   const fullInput = 'Script started on Wed Dec 31 12:10:34 2025\nCommand: bash\nhello\x1b[2Jworld\n\nScript done on Wed Dec 31 12:11:22 2025';
-  compareStreamingVsBatch(fullInput, 10, 'streaming with header/footer');
+  verifyChunkIndependence(
+    fullInput,
+    'hello' + CLEAR_SEPARATOR + 'world',
+    'streaming with header/footer'
+  );
 
-  // Test 10: Large chunks (approaching batch)
-  compareStreamingVsBatch('before\x1b[2Jafter', 10000, 'streaming large chunks');
+  // Test 8: No clears
+  verifyChunkIndependence(
+    'just some content',
+    'just some content',
+    'streaming no clears'
+  );
 
   console.log('\nSelf-test complete.');
 }
