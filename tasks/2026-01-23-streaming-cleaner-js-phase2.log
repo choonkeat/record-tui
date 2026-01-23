@@ -1,0 +1,10 @@
+074255: Starting Phase 2 - Update Node.js Test Harness
+Will be done:
+1. Add createStreamingCleaner import
+2. Add seeded PRNG for random chunk sizes
+3. Add processWithStreaming() function
+4. Replace batch call with streaming
+5. Add clean-compare-output Makefile target
+6. Update test target ordering
+
+Expected: generate_output.js will use streaming with random chunks, make test will run clean first
