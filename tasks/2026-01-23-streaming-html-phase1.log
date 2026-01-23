@@ -1,0 +1,3 @@
+085743 STARTING Phase 1 Step 1: Create test harness (public/streaming-test.html)
+       WILL DO: Create minimal HTML file that loads xterm.js from CDN and contains streaming implementation
+       EXPECT: File created at public/streaming-test.html with xterm.js loading, streaming functions, loading indicator
