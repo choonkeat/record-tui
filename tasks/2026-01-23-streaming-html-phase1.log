@@ -41,3 +41,13 @@
                   before clears being whitespace (TUI apps clear before redrawing).
                   Function verified working with synthetic test cases.
        STATUS: Phase 1 verification PASSED
+
+091852 ADDITIONAL VERIFICATION: Tested with session-3da8dd4e (561KB, 9 clear sequences)
+       OBSERVED: Browser loaded http://172.18.0.6:3000/streaming-test.html
+       GOT:
+         - [PASS] 2 "terminal cleared" separators visible in output
+         - [PASS] Header stripped (no "Script started on")
+         - [PASS] Footer stripped (no "Script done on")
+         - [PASS] 4.5KB text rendered from 561KB file
+       CONCLUSION: Clear sequence neutralization CONFIRMED WORKING with real content
+                   Previous sample.log had clears with whitespace before them (normal TUI behavior)
