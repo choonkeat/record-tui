@@ -1,0 +1,10 @@
+074857: Starting Phase 5 - Remove orphaned code
+Will be done:
+1. Identify functions only used by batch processing
+2. Verify which functions streaming uses
+3. Remove orphaned functions
+4. Update exports
+5. Update self-tests
+6. Run make test to verify
+
+Expected: Code cleanup without breaking functionality
