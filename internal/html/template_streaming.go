@@ -101,8 +101,9 @@ func RenderStreamingPlaybackHTML(opts StreamingOptions) (string, error) {
     // Data URL to fetch session content from
     const DATA_URL = '` + escapedDataURL + `';
 
-    // Clear sequence separator (matches Go implementation in internal/session/clear.go)
-    const CLEAR_SEPARATOR = '\n\n──────── terminal cleared ────────\n\n';
+    // Clear sequence separator
+    // Using \r\n ensures cursor is at column 0 after separator, reducing chance of overwrite
+    const CLEAR_SEPARATOR = '\r\n\r\n──────── terminal cleared ────────\r\n\r\n';
 
     // Clear sequence pattern (matches Go implementation)
     // Matches: \x1b[H\x1b[2J, \x1b[H\x1b[3J, \x1b[2J\x1b[H, \x1b[3J\x1b[H, \x1b[2J, \x1b[3J
