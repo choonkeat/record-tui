@@ -1,6 +1,7 @@
 package session
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -64,13 +65,27 @@ func TestGenerateGoOutput(t *testing.T) {
 		// This is steps 1-4: read bytes -> string -> strip metadata -> neutralize clears
 		cleanedContent := StripMetadata(string(content))
 
-		// Write output file
+		// Write output file with input length header for live recording detection
+		// Format: "{input_length} bytes\n{cleaned_content}"
+		// Write header and content separately to avoid any concatenation issues
 		basename := filepath.Base(match)
 		outputPath := filepath.Join(outputDir, basename+".go.output")
-		if err := os.WriteFile(outputPath, []byte(cleanedContent), 0644); err != nil {
+		header := fmt.Sprintf("%d bytes\n", len(content))
+		if err := os.WriteFile(outputPath, []byte(header), 0644); err != nil {
 			t.Errorf("failed to write output file %q: %v", outputPath, err)
 			continue
 		}
+		f, err := os.OpenFile(outputPath, os.O_APPEND|os.O_WRONLY, 0644)
+		if err != nil {
+			t.Errorf("failed to open output file for append %q: %v", outputPath, err)
+			continue
+		}
+		if _, err := f.WriteString(cleanedContent); err != nil {
+			f.Close()
+			t.Errorf("failed to append to output file %q: %v", outputPath, err)
+			continue
+		}
+		f.Close()
 
 		t.Logf("Processed %s -> %s (%d bytes -> %d bytes)",
 			basename, filepath.Base(outputPath), len(content), len(cleanedContent))

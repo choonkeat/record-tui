@@ -1,0 +1,28 @@
+225935 Starting Phase 4: Output Comparison & Makefile
+225935 Step 4.1: Create compare_output_test.go with debug-friendly comparison
+225935 Expected: Test compares .go.output vs .js.output files with detailed diff on mismatch
+230029 Result: Comparison test created and run. Found 2 mismatches out of 8 files:
+  - session-1d78746d: UTF-8 encoding issue (Go: raw 0xbd byte, JS: U+FFFD replacement char)
+  - session-c50c683c: Footer stripping issue (JS has extra content at end)
+230029 Step 4.2: Fix JS to read files as binary (latin1) to preserve raw bytes like Go
+230029 Expected: After fix, session-1d78746d should match
+230226 Result: After latin1 fix + CLEAR_SEPARATOR raw bytes fix, 7 out of 8 files match
+230226 Remaining mismatch: session-c50c683c (footer stripping issue - JS has 890078 bytes, Go has 479773 bytes)
+230226 Step 4.3: Investigate and fix footer stripping difference
+230226 Expected: All 8 files should match
+230346 Result: Verified that session-c50c683c is a LIVE RECORDING file being actively modified
+230346   - Go output: 962652 bytes
+230346   - JS output: 972086 bytes (file grew ~10KB between runs)
+230346   - Verified: First 962652 bytes are BYTE-IDENTICAL between Go and JS
+230346   - Conclusion: Implementation is correct, mismatch is due to live recording
+230346 Step 4.4: Update Makefile with test-go, test-js, compare-output, and test targets
+230346 Expected: make test runs all three targets in sequence
+231040 Step 4.5: Add input length header to output files for proper live recording detection
+231040   - Output format: "{input_length} bytes\n{cleaned_content}"
+231040   - Write header and content separately (paranoia about concatenation)
+231040   - Comparison test parses header to detect live recordings by input length difference
+231040 Result: PASS - make test succeeds
+231040   - 7 files match exactly
+231040   - 1 live recording detected (skipped, not a failure)
+231040   - 0 mismatches
+231040 Phase 4 COMPLETE
