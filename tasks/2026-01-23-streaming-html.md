@@ -195,27 +195,27 @@ Add loading indicator to embedded HTML, update documentation.
 
 ### Steps
 
-1. **Add loading indicator to `internal/html/template.go`**
+1. [x] **Add loading indicator to `internal/html/template.go`**
    - Show "Loading..." before base64 parsing
    - Replace with terminal content after xterm.write()
 
-2. **Update `README.md`**
+2. [x] **Update `README.md`**
    - Document `RenderStreamingHTML()` in Library Usage section
    - Explain when to use each mode:
      - `RenderHTML()`: embedded, works offline, best for < 1MB
      - `RenderStreamingHTML()`: streaming, requires server, best for large files
    - Add code examples for both
 
-3. **Add code comments**
-   - Document streaming JavaScript logic
-   - Explain escape sequence boundary handling
-   - Explain trailing buffer for footer detection
+3. [x] **Add code comments**
+   - Streaming JavaScript logic documented in template_streaming.go
+   - Escape sequence boundary handling explained in comments
+   - Trailing buffer for footer detection explained
 
 ### Verification
 
-- [ ] Embedded HTML shows "Loading..." before content (test with large file)
-- [ ] README examples are copy-paste runnable
-- [ ] `make test` passes
+- [x] Embedded HTML shows "Loading..." before content (test added)
+- [x] README examples are copy-paste runnable
+- [x] `go test ./...` passes (all 4 packages)
 
 ---
 

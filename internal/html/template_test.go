@@ -254,3 +254,24 @@ func TestRenderPlaybackHTML_FooterLinkEscaping(t *testing.T) {
 		t.Errorf("Footer URL should be HTML escaped")
 	}
 }
+
+func TestRenderPlaybackHTML_ContainsLoadingIndicator(t *testing.T) {
+	frames := []PlaybackFrame{{Timestamp: 0, Content: "test"}}
+
+	html, err := RenderPlaybackHTML(frames, "", FooterLink{})
+	if err != nil {
+		t.Fatalf("RenderPlaybackHTML failed: %v", err)
+	}
+
+	// Should contain loading indicator
+	if !strings.Contains(html, "Loading...") {
+		t.Error("HTML should contain loading indicator")
+	}
+	if !strings.Contains(html, `id="loading"`) {
+		t.Error("HTML should contain loading div with id")
+	}
+	// Should hide loading indicator before writing content
+	if !strings.Contains(html, `getElementById('loading').style.display = 'none'`) {
+		t.Error("HTML should hide loading indicator")
+	}
+}

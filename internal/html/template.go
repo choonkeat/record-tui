@@ -80,9 +80,16 @@ func RenderPlaybackHTML(frames []PlaybackFrame, title string, footerLink FooterL
       color: #ffffff;
       text-decoration: underline;
     }
+
+    #loading {
+      padding: 24px;
+      font-size: 16px;
+      color: #888888;
+    }
   </style>
 </head>
 <body>
+  <div id="loading">Loading...</div>
   <div id="terminal"></div>
   <div id="footer">
     ` + footerHTML + `
@@ -149,7 +156,8 @@ func RenderPlaybackHTML(frames []PlaybackFrame, title string, footerLink FooterL
       terminalElement.remove();
     }
 
-    // Display first (and only) frame
+    // Hide loading indicator and display content
+    document.getElementById('loading').style.display = 'none';
     xterm.write(content);
 
     // After rendering, check actual rendered height and resize if needed
