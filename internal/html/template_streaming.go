@@ -254,6 +254,7 @@ func RenderStreamingPlaybackHTML(opts StreamingOptions) (string, error) {
 
     /**
      * Resize terminal to fit actual content after streaming completes.
+     * For playback, we only care about visible content, not cursor position.
      */
     function resizeToFitContent(xterm, cols) {
       const buffer = xterm.buffer.active;
@@ -272,9 +273,8 @@ func RenderStreamingPlaybackHTML(opts StreamingOptions) (string, error) {
         }
       }
 
-      // Account for cursor position
-      const cursorRow = buffer.cursorY + 1;
-      const actualHeight = Math.max(lastContentRow, cursorRow, 1);
+      // Use only content height, not cursor position (cursor may be far below content)
+      const actualHeight = Math.max(lastContentRow, 1);
 
       xterm.resize(cols, actualHeight);
     }
