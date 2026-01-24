@@ -208,6 +208,7 @@ func RenderStreamingPlaybackHTML(opts StreamingOptions) (string, error) {
     // Main initialization
     async function main() {
       // Initialize xterm with dimensions from server metadata (or defaults for auto-detect)
+      // Read-only terminal: no keyboard/mouse input, but selection allowed for copy
       const terminalDiv = document.getElementById('terminal');
       const xterm = new Terminal({
         cols: TERM_COLS,
@@ -216,6 +217,8 @@ func RenderStreamingPlaybackHTML(opts StreamingOptions) (string, error) {
         fontSize: 15,
         cursorBlink: false,
         disableStdin: true,
+        altClickMovesCursor: false,
+        scrollOnUserInput: false,
         theme: {
           background: '#1e1e1e',
           foreground: '#d4d4d4',
@@ -224,10 +227,16 @@ func RenderStreamingPlaybackHTML(opts StreamingOptions) (string, error) {
       });
       xterm.open(terminalDiv);
 
-      // Remove textarea to prevent focus capture
+      // Block all keyboard events from xterm processing
+      xterm.attachCustomKeyEventHandler(() => false);
+
+      // Block wheel events - let the page scroll instead of terminal
+      xterm.attachCustomWheelEventHandler(() => false);
+
+      // Disable textarea to prevent focus capture and soft keyboard
       const terminalTextarea = document.querySelector('.xterm textarea');
       if (terminalTextarea) {
-        terminalTextarea.remove();
+        terminalTextarea.setAttribute('disabled', 'true');
       }
 
       try {

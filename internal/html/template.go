@@ -135,13 +135,16 @@ func RenderPlaybackHTML(frames []PlaybackFrame, title string, footerLink FooterL
     const contentCols = Math.min(Math.max(maxLineLength, 80), 240);
 
     // Initialize xterm.js with dimensions based on actual content usage
+    // Read-only terminal: no keyboard/mouse input, but selection allowed for copy
     const terminalDiv = document.getElementById('terminal');
     const xterm = new Terminal({
       cols: contentCols,
       rows: estimatedRows,
       fontSize: 15,
       cursorBlink: false,
-      disableStdin: true,  // Disable keyboard input to allow normal page scrolling
+      disableStdin: true,
+      altClickMovesCursor: false,
+      scrollOnUserInput: false,
       theme: {
         background: '#1e1e1e',
         foreground: '#d4d4d4',
@@ -150,10 +153,16 @@ func RenderPlaybackHTML(frames []PlaybackFrame, title string, footerLink FooterL
     });
     xterm.open(terminalDiv);
 
-    // Prevent xterm from capturing focus
-    const terminalElement = document.querySelector('.xterm textarea');
-    if (terminalElement) {
-      terminalElement.remove();
+    // Block all keyboard events from xterm processing
+    xterm.attachCustomKeyEventHandler(() => false);
+
+    // Block wheel events - let the page scroll instead of terminal
+    xterm.attachCustomWheelEventHandler(() => false);
+
+    // Disable textarea to prevent focus capture and soft keyboard
+    const terminalTextarea = document.querySelector('.xterm textarea');
+    if (terminalTextarea) {
+      terminalTextarea.setAttribute('disabled', 'true');
     }
 
     // Hide loading indicator and display content
