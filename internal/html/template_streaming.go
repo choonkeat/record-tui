@@ -9,11 +9,12 @@ import (
 
 // StreamingOptions configures streaming HTML rendering.
 type StreamingOptions struct {
-	Title      string     // Page title (defaults to "Terminal" if empty)
-	DataURL    string     // URL to fetch session data from
-	FooterLink FooterLink // Optional co-branding link
-	Cols       uint16     // Terminal columns (0 = auto-detect, default 240)
-	Rows       uint16     // Terminal rows (0 = auto-detect via post-render resize)
+	Title         string     // Page title (defaults to "Terminal" if empty)
+	DataURL       string     // URL to fetch session data from
+	FooterLink    FooterLink // Optional co-branding link
+	Cols          uint16     // Terminal columns (0 = auto-detect, default 240)
+	Rows          uint16     // Terminal rows (0 = auto-detect via post-render resize)
+	EstimatedRows uint32     // Content-based row estimate from caller (0 = use scrollback buffer)
 }
 
 // RenderStreamingPlaybackHTML generates an HTML document that streams terminal data from a URL.
@@ -34,10 +35,29 @@ func RenderStreamingPlaybackHTML(opts StreamingOptions) (string, error) {
 	if cols == 0 {
 		cols = 240 // Default to match embedded template's max width cap
 	}
-	rows := opts.Rows
-	autoResizeEnabled := rows == 0
-	if rows == 0 {
-		rows = 1000 // Large initial value for auto-detect mode
+
+	// Determine rows and scrollback strategy
+	// If EstimatedRows is provided, use exact sizing (like embedded mode)
+	// Otherwise use large scrollback buffer for arbitrary streaming
+	var rows uint32
+	var scrollback uint32
+	var autoResizeEnabled bool
+
+	if opts.EstimatedRows > 0 {
+		// Caller provided content-based estimate (e.g., swe-swe with session.log)
+		rows = opts.EstimatedRows
+		scrollback = 0 // No scrollback needed - rows = content height
+		autoResizeEnabled = false
+	} else if opts.Rows > 0 {
+		// Legacy: caller provided viewport rows (not useful, but honor it)
+		rows = uint32(opts.Rows)
+		scrollback = 1000000 // Large buffer since Rows is viewport, not content
+		autoResizeEnabled = false
+	} else {
+		// Auto-detect mode: large buffer + post-render resize
+		rows = 1000
+		scrollback = 1000000
+		autoResizeEnabled = true
 	}
 
 	// Build footer HTML
@@ -119,6 +139,7 @@ func RenderStreamingPlaybackHTML(opts StreamingOptions) (string, error) {
     // Terminal dimensions (from server metadata or defaults)
     const TERM_COLS = ` + fmt.Sprintf("%d", cols) + `;
     const TERM_ROWS = ` + fmt.Sprintf("%d", rows) + `;
+    const TERM_SCROLLBACK = ` + fmt.Sprintf("%d", scrollback) + `;
     const AUTO_RESIZE = ` + fmt.Sprintf("%t", autoResizeEnabled) + `;
 
     // ============================================================
@@ -191,7 +212,7 @@ func RenderStreamingPlaybackHTML(opts StreamingOptions) (string, error) {
       const xterm = new Terminal({
         cols: TERM_COLS,
         rows: TERM_ROWS,
-        scrollback: 1000000,  // Large buffer for playback - allows viewing full session history
+        scrollback: TERM_SCROLLBACK,
         fontSize: 15,
         cursorBlink: false,
         disableStdin: true,
