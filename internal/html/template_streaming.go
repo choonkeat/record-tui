@@ -2,6 +2,8 @@ package html
 
 import (
 	"html"
+
+	"github.com/choonkeat/record-tui/internal/js"
 )
 
 // StreamingOptions configures streaming HTML rendering.
@@ -102,168 +104,10 @@ func RenderStreamingPlaybackHTML(opts StreamingOptions) (string, error) {
     const DATA_URL = '` + escapedDataURL + `';
 
     // ============================================================
-    // Streaming cleaner - same logic as internal/js/cleaner.js
+    // Streaming cleaner - embedded from internal/js/cleaner-core.js
+    // This is the single source of truth for both Node.js and browser
     // ============================================================
-
-    // Clear sequence separator - must match Go's ClearSeparator in clear.go:9
-    // Using raw UTF-8 bytes for '─' (U+2500) = 0xe2 0x94 0x80
-    const CLEAR_SEPARATOR = '\n\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 terminal cleared \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\n';
-
-    // Clear sequence pattern - matches Go's clearPattern in clear.go:16
-    const clearPattern = /\x1b\[H\x1b\[[23]J|\x1b\[[23]J\x1b\[H|\x1b\[[23]J/g;
-
-    function stripHeader(text) {
-      const lines = text.split('\n');
-      let startIndex = 0;
-      for (let i = 0; i < lines.length && i < 5; i++) {
-        const line = lines[i];
-        if (line.startsWith('Script started on') || line.startsWith('Command:')) {
-          startIndex = i + 1;
-        }
-      }
-      if (startIndex === 0) return text;
-      return lines.slice(startIndex).join('\n');
-    }
-
-    function stripFooter(text) {
-      const lines = text.split('\n');
-      let footerStartIndex = lines.length;
-      for (let i = lines.length - 1; i >= 0; i--) {
-        const line = lines[i];
-        if (line.includes('Saving session') ||
-            line.includes('Command exit status') ||
-            line.includes('Script done on') ||
-            (line.trim() === '' && i > 0)) {
-          footerStartIndex = i;
-        } else if (footerStartIndex < lines.length) {
-          break;
-        }
-      }
-      let endIndex = footerStartIndex;
-      while (endIndex > 0 && lines[endIndex - 1].trim() === '') endIndex--;
-      if (endIndex >= lines.length) return text;
-      return lines.slice(0, endIndex).join('\n');
-    }
-
-    function createStreamingCleaner(onOutput) {
-      let headerBuffer = '';
-      let headerStripped = false;
-      const HEADER_LINES_THRESHOLD = 5;
-      let hasEmittedContent = false;
-      let pendingSeparator = false;
-      let pendingWhitespace = '';
-      let escapeBuffer = '';
-      let trailingBuffer = '';
-      const TRAILING_SIZE = 500;
-
-      function processForClears(text) {
-        if (!text) return '';
-        clearPattern.lastIndex = 0;
-        const matches = [];
-        let m;
-        while ((m = clearPattern.exec(text)) !== null) {
-          matches.push([m.index, m.index + m[0].length]);
-        }
-        if (matches.length === 0) {
-          if (text.trim() !== '') {
-            if (pendingSeparator) {
-              const result = CLEAR_SEPARATOR + pendingWhitespace + text;
-              pendingSeparator = false;
-              pendingWhitespace = '';
-              hasEmittedContent = true;
-              return result;
-            }
-            hasEmittedContent = true;
-            return text;
-          }
-          if (pendingSeparator) {
-            pendingWhitespace += text;
-            return '';
-          }
-          return text;
-        }
-        let result = '';
-        let lastEnd = 0;
-        for (const [start, end] of matches) {
-          const before = text.slice(lastEnd, start);
-          if (before.trim() !== '') {
-            if (pendingSeparator) {
-              result += CLEAR_SEPARATOR + pendingWhitespace;
-              pendingSeparator = false;
-              pendingWhitespace = '';
-            }
-            result += before;
-            hasEmittedContent = true;
-          } else if (pendingSeparator) {
-            pendingWhitespace += before;
-          }
-          if (hasEmittedContent) {
-            pendingSeparator = true;
-            pendingWhitespace = '';
-          }
-          lastEnd = end;
-        }
-        const remaining = text.slice(lastEnd);
-        if (remaining.trim() !== '') {
-          if (pendingSeparator) {
-            result += CLEAR_SEPARATOR + pendingWhitespace;
-            pendingSeparator = false;
-            pendingWhitespace = '';
-          }
-          result += remaining;
-          hasEmittedContent = true;
-        } else if (remaining && pendingSeparator) {
-          pendingWhitespace += remaining;
-        }
-        return result;
-      }
-
-      function write(chunk) {
-        let text = escapeBuffer + chunk;
-        escapeBuffer = '';
-        const lastEsc = text.lastIndexOf('\x1b');
-        if (lastEsc >= 0 && lastEsc > text.length - 10) {
-          escapeBuffer = text.slice(lastEsc);
-          text = text.slice(0, lastEsc);
-        }
-        if (!headerStripped) {
-          headerBuffer += text;
-          text = '';
-          const newlineCount = (headerBuffer.match(/\n/g) || []).length;
-          if (newlineCount >= HEADER_LINES_THRESHOLD) {
-            headerBuffer = stripHeader(headerBuffer);
-            headerStripped = true;
-            text = headerBuffer;
-            headerBuffer = '';
-          } else {
-            return;
-          }
-        }
-        text = trailingBuffer + text;
-        trailingBuffer = '';
-        if (text.length > TRAILING_SIZE) {
-          const toEmit = text.slice(0, -TRAILING_SIZE);
-          trailingBuffer = text.slice(-TRAILING_SIZE);
-          const processed = processForClears(toEmit);
-          if (processed) onOutput(processed);
-        } else {
-          trailingBuffer = text;
-        }
-      }
-
-      function end() {
-        let text = trailingBuffer + escapeBuffer;
-        if (!headerStripped) {
-          text = headerBuffer + text;
-          text = stripHeader(text);
-        }
-        text = stripFooter(text);
-        const processed = processForClears(text);
-        if (processed) onOutput(processed);
-      }
-
-      return { write, end };
-    }
+` + js.CleanerCoreJS + `
 
     /**
      * Stream session data from URL to xterm using streaming cleaner.
