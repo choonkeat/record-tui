@@ -29,4 +29,6 @@ type StreamingOptions struct {
 	Title      string     // Page title (defaults to "Terminal" if empty)
 	DataURL    string     // URL to fetch session data from (e.g., "./session.log", "/api/recording/123")
 	FooterLink FooterLink // Optional co-branding link in footer
+	Cols       uint16     // Terminal columns (0 = auto-detect, default 240)
+	Rows       uint16     // Terminal rows (0 = auto-detect via post-render resize)
 }
