@@ -26,9 +26,10 @@ type Options struct {
 // Use this for large terminal recordings where embedding data in HTML causes slow loading.
 // The generated HTML fetches session data from DataURL and streams it to xterm.js.
 type StreamingOptions struct {
-	Title      string     // Page title (defaults to "Terminal" if empty)
-	DataURL    string     // URL to fetch session data from (e.g., "./session.log", "/api/recording/123")
-	FooterLink FooterLink // Optional co-branding link in footer
-	Cols       uint16     // Terminal columns (0 = auto-detect, default 240)
-	Rows       uint16     // Terminal rows (0 = auto-detect via post-render resize)
+	Title         string     // Page title (defaults to "Terminal" if empty)
+	DataURL       string     // URL to fetch session data from (e.g., "./session.log", "/api/recording/123")
+	FooterLink    FooterLink // Optional co-branding link in footer
+	Cols          uint16     // Terminal columns (0 = auto-detect, default 240)
+	Rows          uint16     // Terminal rows (0 = auto-detect via post-render resize)
+	EstimatedRows uint32     // Content-based row estimate (0 = use scrollback buffer)
 }

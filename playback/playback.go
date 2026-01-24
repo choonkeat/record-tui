@@ -84,8 +84,9 @@ func RenderStreamingHTML(opts StreamingOptions) (string, error) {
 			Text: opts.FooterLink.Text,
 			URL:  opts.FooterLink.URL,
 		},
-		Cols: opts.Cols,
-		Rows: opts.Rows,
+		Cols:          opts.Cols,
+		Rows:          opts.Rows,
+		EstimatedRows: opts.EstimatedRows,
 	}
 	return html.RenderStreamingPlaybackHTML(internalOpts)
 }
