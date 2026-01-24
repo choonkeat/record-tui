@@ -191,6 +191,7 @@ func RenderStreamingPlaybackHTML(opts StreamingOptions) (string, error) {
       const xterm = new Terminal({
         cols: TERM_COLS,
         rows: TERM_ROWS,
+        scrollback: 1000000,  // Large buffer for playback - allows viewing full session history
         fontSize: 15,
         cursorBlink: false,
         disableStdin: true,
