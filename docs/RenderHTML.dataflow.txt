@@ -1,0 +1,101 @@
+● Here's the complete data flow for raw session bytes → xterm in the embedded RenderHTML version:
+
+  Data Flow: Raw Bytes → xterm
+
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │ 1. FILE READ (Go)                                                           │
+  │    os.ReadFile(sessionLogPath) → []byte                                     │
+  │    converter.go:28                                                          │
+  └────────────────────────────────────┬────────────────────────────────────────┘
+                                       ▼
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │ 2. CAST TO STRING (Go)                                                      │
+  │    string(sessionContent)                                                   │
+  │    converter.go:34                                                          │
+  └────────────────────────────────────┬────────────────────────────────────────┘
+                                       ▼
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │ 3. STRIP METADATA (Go)              cleaner.go:11-60                        │
+  │    - Split by "\n"                                                          │
+  │    - Remove first ~5 lines if "Script started on" or "Command:"             │
+  │    - Remove footer: "Saving session", "Command exit status", "Script done"  │
+  │    - Trim trailing empty lines                                              │
+  │    - Join back with "\n"                                                    │
+  └────────────────────────────────────┬────────────────────────────────────────┘
+                                       ▼
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │ 4. NEUTRALIZE CLEAR SEQUENCES (Go)  clear.go:22-64                          │
+  │    Regex: \x1b\[H\x1b\[[23]J|\x1b\[[23]J\x1b\[H|\x1b\[[23]J                  │
+  │    Replace with: "\n\n──────── terminal cleared ────────\n\n"               │
+  │    (Only if content exists before AND after)                                │
+  └────────────────────────────────────┬────────────────────────────────────────┘
+                                       ▼
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │ 5. WRAP IN FRAME STRUCT (Go)        converter.go:40-45                      │
+  │    playback.Frame{Timestamp: 0.0, Content: cleanedContent}                  │
+  └────────────────────────────────────┬────────────────────────────────────────┘
+                                       ▼
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │ 6. JSON MARSHAL (Go)                template.go:15                          │
+  │    json.Marshal(frames) → []byte                                            │
+  │    Content string → JSON with escape sequences preserved                    │
+  └────────────────────────────────────┬────────────────────────────────────────┘
+                                       ▼
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │ 7. BASE64 ENCODE (Go)               template.go:20                          │
+  │    base64.StdEncoding.EncodeToString(framesJSON)                            │
+  └────────────────────────────────────┬────────────────────────────────────────┘
+                                       ▼
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │ 8. EMBED IN HTML (Go)               template.go:103                         │
+  │    const framesBase64 = '${framesBase64}';                                  │
+  └────────────────────────────────────┬────────────────────────────────────────┘
+                                       ▼
+  ═══════════════════════════════════════════════════════════════════════════════
+                                BROWSER BOUNDARY
+  ═══════════════════════════════════════════════════════════════════════════════
+                                       ▼
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │ 9. BASE64 DECODE (JS)               template.go:104-106                     │
+  │    atob(framesBase64) → Latin1 string (bytes as char codes)                 │
+  │    Uint8Array.from(..., c => c.charCodeAt(0)) → byte array                  │
+  │    new TextDecoder().decode(...) → proper UTF-8 string                      │
+  └────────────────────────────────────┬────────────────────────────────────────┘
+                                       ▼
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │ 10. JSON PARSE (JS)                 template.go:107                         │
+  │     JSON.parse(framesJson) → [{timestamp, content}, ...]                    │
+  └────────────────────────────────────┬────────────────────────────────────────┘
+                                       ▼
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │ 11. EXTRACT CONTENT (JS)            template.go:110                         │
+  │     frames[frames.length - 1].content  (last frame has all content)         │
+  └────────────────────────────────────┬────────────────────────────────────────┘
+                                       ▼
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │ 12. WRITE TO XTERM (JS)             template.go:161                         │
+  │     xterm.write(content)                                                    │
+  │     xterm.js interprets ANSI escape sequences for colors, cursor, etc.     │
+  └─────────────────────────────────────────────────────────────────────────────┘
+
+  Key Transformations Summary
+  ┌──────┬─────────────────────────┬─────────────────────────────────────────────┐
+  │ Step │        Transform        │                    Notes                    │
+  ├──────┼─────────────────────────┼─────────────────────────────────────────────┤
+  │ 2    │ []byte → string         │ Go treats as UTF-8                          │
+  ├──────┼─────────────────────────┼─────────────────────────────────────────────┤
+  │ 3-4  │ String manipulation     │ Metadata stripped, clears neutralized       │
+  ├──────┼─────────────────────────┼─────────────────────────────────────────────┤
+  │ 6    │ string → JSON bytes     │ ANSI codes like \x1b[91m become \\u001b[91m │
+  ├──────┼─────────────────────────┼─────────────────────────────────────────────┤
+  │ 7    │ JSON bytes → base64     │ Binary-safe encoding                        │
+  ├──────┼─────────────────────────┼─────────────────────────────────────────────┤
+  │ 9    │ base64 → UTF-8 string   │ atob + TextDecoder for proper UTF-8         │
+  ├──────┼─────────────────────────┼─────────────────────────────────────────────┤
+  │ 10   │ JSON string → JS object │ Escape sequences restored                   │
+  ├──────┼─────────────────────────┼─────────────────────────────────────────────┤
+  │ 12   │ xterm.write()           │ ANSI interpreted for rendering              │
+  └──────┴─────────────────────────┴─────────────────────────────────────────────┘
+  The key insight: ANSI escape sequences are preserved throughout as literal bytes in the string content.
+  They survive JSON serialization (escaped as \u001b), base64 encoding, and are restored when parsed, so
+  xterm.js receives them intact.

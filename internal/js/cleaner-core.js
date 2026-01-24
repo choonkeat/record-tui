@@ -8,9 +8,11 @@
  */
 
 // Clear sequence separator - must match Go's ClearSeparator in clear.go:9
-// Using raw UTF-8 bytes for '─' (U+2500) = 0xe2 0x94 0x80 to ensure byte-level parity with Go
-// when processing files as latin1 (raw bytes)
-const CLEAR_SEPARATOR = '\n\n\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80 terminal cleared \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\n\n';
+// Using Unicode escape \u2500 for box-drawing character '─' (U+2500)
+// Both Go strings and JS strings are UTF-8/UTF-16, so this works correctly in:
+// - Node.js test harness (reading files as UTF-8)
+// - Browser streaming (TextDecoder with UTF-8)
+const CLEAR_SEPARATOR = '\n\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 terminal cleared \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\n';
 
 // Clear sequence pattern - must match Go's clearPattern in clear.go:16
 // Matches: \x1b[H\x1b[2J, \x1b[H\x1b[3J, \x1b[2J\x1b[H, \x1b[3J\x1b[H, \x1b[2J, \x1b[3J

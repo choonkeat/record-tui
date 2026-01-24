@@ -82,11 +82,11 @@ function main() {
       continue;
     }
 
-    // Read file as binary (latin1) to preserve raw bytes like Go's string([]byte)
-    // Note: utf8 encoding would replace invalid sequences with U+FFFD replacement char
+    // Read file as UTF-8 to match Go's string handling (Go strings are UTF-8)
+    // Session logs are text output from terminals, which use UTF-8
     let content;
     try {
-      content = fs.readFileSync(realPath, 'latin1');
+      content = fs.readFileSync(realPath, 'utf8');
     } catch (err) {
       console.error(`Failed to read file "${realPath}": ${err.message}`);
       continue;
@@ -101,8 +101,8 @@ function main() {
     const outputPath = path.join(OUTPUT_DIR, file + '.js.output');
     const header = `${content.length} bytes\n`;
     try {
-      fs.writeFileSync(outputPath, header, 'utf8');  // header is ASCII, utf8 is fine
-      fs.appendFileSync(outputPath, cleanedContent, 'latin1');  // content as raw bytes
+      fs.writeFileSync(outputPath, header, 'utf8');
+      fs.appendFileSync(outputPath, cleanedContent, 'utf8');
     } catch (err) {
       console.error(`Failed to write output file "${outputPath}": ${err.message}`);
       continue;
