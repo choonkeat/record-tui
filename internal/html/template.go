@@ -38,7 +38,7 @@ func RenderPlaybackHTML(frames []PlaybackFrame, title string, footerLink FooterL
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>` + escapedTitle + `</title>
   <!-- xterm.js CSS -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.5.0/css/xterm.css" />
   <style>
     * {
       margin: 0;
@@ -96,7 +96,7 @@ func RenderPlaybackHTML(frames []PlaybackFrame, title string, footerLink FooterL
   </div>
 
   <!-- xterm.js script -->
-  <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm@5.5.0/lib/xterm.js"></script>
 
   <script>
     // Decode base64-encoded frame data (UTF-8 safe)
