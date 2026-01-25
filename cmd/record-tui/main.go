@@ -79,8 +79,8 @@ func openRecordingDir(dir string) {
 }
 
 func main() {
-	convertFlag := flag.String("convert", "", "Convert existing session.log file to HTML")
-	streamingFlag := flag.Bool("streaming", false, "Generate streaming HTML (requires serving via HTTP)")
+	convertFlag := flag.String("convert", "", "Convert session.log to HTML (outputs <file>.html)")
+	streamingFlag := flag.Bool("streaming", false, "Generate streaming HTML instead (outputs <file>.streaming.html)")
 	flag.Parse()
 	args := flag.Args()
 
