@@ -62,6 +62,26 @@ func TestCompareGoAndJsOutput(t *testing.T) {
 			continue
 		}
 
+		// Check for live recording using mtime: if source file was modified after
+		// Go processed it, the file changed between Go and JS runs
+		sourcePath := filepath.Join(recordingsDir, baseName)
+		sourceInfo, err := os.Stat(sourcePath)
+		if err != nil {
+			t.Errorf("failed to stat source file %q: %v", sourcePath, err)
+			continue
+		}
+		goOutputInfo, err := os.Stat(goFile)
+		if err != nil {
+			t.Errorf("failed to stat go output file %q: %v", goFile, err)
+			continue
+		}
+		if sourceInfo.ModTime().After(goOutputInfo.ModTime()) {
+			liveRecordings = append(liveRecordings, baseName)
+			t.Logf("LIVE RECORDING (warning): %s - source modified after Go processed it (source: %v, go output: %v)",
+				baseName, sourceInfo.ModTime().Format("15:04:05.000"), goOutputInfo.ModTime().Format("15:04:05.000"))
+			continue
+		}
+
 		// Read both files
 		goContent, err := os.ReadFile(goFile)
 		if err != nil {
@@ -75,18 +95,13 @@ func TestCompareGoAndJsOutput(t *testing.T) {
 			continue
 		}
 
-		// Parse input lengths from headers (format: "{length} bytes\n...")
-		goInputLen, goBody := parseOutputFile(goContent)
-		jsInputLen, jsBody := parseOutputFile(jsContent)
+		// Parse output files to get body content (skip header line)
+		_, goBody := parseOutputFile(goContent)
+		_, jsBody := parseOutputFile(jsContent)
 
 		// Compare
-		if goInputLen != jsInputLen {
-			// Input lengths differ = live recording (file changed between reads)
-			liveRecordings = append(liveRecordings, baseName)
-			t.Logf("LIVE RECORDING (warning): %s - input sizes differ (Go read %d bytes, JS read %d bytes)",
-				baseName, goInputLen, jsInputLen)
-		} else if bytes.Equal(goBody, jsBody) {
-			t.Logf("MATCH: %s (input: %d bytes, output: %d bytes)", baseName, goInputLen, len(goBody))
+		if bytes.Equal(goBody, jsBody) {
+			t.Logf("MATCH: %s (%d bytes)", baseName, len(goBody))
 		} else {
 			mismatches = append(mismatches, baseName)
 			reportMismatch(t, baseName, goFile, jsFile, goBody, jsBody)

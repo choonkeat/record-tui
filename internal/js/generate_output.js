@@ -99,7 +99,9 @@ function main() {
     // Format: "{input_length} bytes\n{cleaned_content}"
     // Write header and content separately to avoid any concatenation issues
     const outputPath = path.join(OUTPUT_DIR, file + '.js.output');
-    const header = `${content.length} bytes\n`;
+    // Use Buffer.byteLength to get byte count (not character count) to match Go's len([]byte)
+    const inputByteLength = Buffer.byteLength(content, 'utf8');
+    const header = `${inputByteLength} bytes\n`;
     try {
       fs.writeFileSync(outputPath, header, 'utf8');
       fs.appendFileSync(outputPath, cleanedContent, 'utf8');
