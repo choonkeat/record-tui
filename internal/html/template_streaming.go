@@ -175,35 +175,6 @@ func RenderStreamingPlaybackHTML(opts StreamingOptions) (string, error) {
       cleaner.end();
     }
 
-    /**
-     * Resize terminal to fit actual content after streaming completes.
-     * For playback, we only care about visible content, not cursor position.
-     * Uses limited search to avoid freezing on large scrollback buffers.
-     */
-    function resizeToFitContent(xterm, cols) {
-      const buffer = xterm.buffer.active;
-      if (!buffer) return;
-
-      // Limit search to avoid freezing - 10000 rows is plenty for any reasonable content
-      const MAX_SEARCH = 10000;
-      const searchStart = Math.max(0, buffer.length - MAX_SEARCH);
-
-      // Find the last row with content, searching backwards from end
-      let lastContentRow = searchStart; // Default to search start if no content found
-      for (let i = buffer.length - 1; i >= searchStart; i--) {
-        const line = buffer.getLine(i);
-        if (line && line.translateToString(true).trim()) {
-          lastContentRow = i + 1;
-          break;
-        }
-      }
-
-      // Use only content height, not cursor position (cursor may be far below content)
-      const actualHeight = Math.max(lastContentRow, 1);
-
-      xterm.resize(cols, actualHeight);
-    }
-
     // Main initialization
     async function main() {
       // Initialize xterm with dimensions from server metadata (or defaults for auto-detect)
