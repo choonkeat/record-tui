@@ -89,7 +89,7 @@ func main() {
 		var htmlPath string
 		var err error
 		if *streamingFlag {
-			htmlPath, err = record.ConvertSessionToStreamingHTML(*convertFlag)
+			htmlPath, err = record.ConvertSessionToStreamingHTML(*convertFlag, 100000)
 		} else {
 			htmlPath, err = record.ConvertSessionToHTML(*convertFlag)
 		}
