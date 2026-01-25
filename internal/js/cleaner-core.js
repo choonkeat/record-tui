@@ -56,13 +56,17 @@ function stripFooter(text) {
   // Footer can contain "Saving session", "Command exit status", "Script done on" in any order
   // Work backwards from end of file
   let footerStartIndex = lines.length;
+  let hasFooterMarker = false;
   for (let i = lines.length - 1; i >= 0; i--) {
     const line = lines[i];
-    // Check if this line is part of the footer
-    if (line.includes('Saving session') ||
-        line.includes('Command exit status') ||
-        line.includes('Script done on') ||
-        (line.trim() === '' && i > 0)) {
+    // Check if this line is a footer marker (must start with the marker text)
+    if (line.startsWith('Saving session') ||
+        line.startsWith('Command exit status') ||
+        line.startsWith('Script done on')) {
+      hasFooterMarker = true;
+      footerStartIndex = i;
+    } else if (hasFooterMarker && line.trim() === '') {
+      // Only treat empty lines as footer if we already found a footer marker
       footerStartIndex = i;
     } else if (footerStartIndex < lines.length) {
       // We've found content before the footer, stop looking

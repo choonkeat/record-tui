@@ -27,13 +27,17 @@ func StripMetadata(content string) string {
 	// Footer can contain "Saving session", "Command exit status", "Script done on" in any order
 	// Work backwards from end of file
 	footerStartIndex := len(lines)
+	hasFooterMarker := false
 	for i := len(lines) - 1; i >= 0; i-- {
 		line := lines[i]
-		// Check if this line is part of the footer
-		if strings.Contains(line, "Saving session") ||
-			strings.Contains(line, "Command exit status") ||
-			strings.Contains(line, "Script done on") ||
-			(strings.TrimSpace(line) == "" && i > 0) {
+		// Check if this line is a footer marker (must start with the marker text)
+		if strings.HasPrefix(line, "Saving session") ||
+			strings.HasPrefix(line, "Command exit status") ||
+			strings.HasPrefix(line, "Script done on") {
+			hasFooterMarker = true
+			footerStartIndex = i
+		} else if hasFooterMarker && strings.TrimSpace(line) == "" {
+			// Only treat empty lines as footer if we already found a footer marker
 			footerStartIndex = i
 		} else if footerStartIndex < len(lines) {
 			// We've found content before the footer, stop looking
