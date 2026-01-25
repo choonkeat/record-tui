@@ -80,12 +80,19 @@ func openRecordingDir(dir string) {
 
 func main() {
 	convertFlag := flag.String("convert", "", "Convert existing session.log file to HTML")
+	streamingFlag := flag.Bool("streaming", false, "Generate streaming HTML (requires serving via HTTP)")
 	flag.Parse()
 	args := flag.Args()
 
 	// Handle conversion mode
 	if *convertFlag != "" {
-		htmlPath, err := record.ConvertSessionToHTML(*convertFlag)
+		var htmlPath string
+		var err error
+		if *streamingFlag {
+			htmlPath, err = record.ConvertSessionToStreamingHTML(*convertFlag)
+		} else {
+			htmlPath, err = record.ConvertSessionToHTML(*convertFlag)
+		}
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: Conversion failed: %v\n", err)
 			os.Exit(1)

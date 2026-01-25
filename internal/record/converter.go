@@ -114,3 +114,36 @@ func ConvertSessionToHTMLWithPath(sessionLogPath string, outputPath string) (str
 
 	return outPath, nil
 }
+
+// ConvertSessionToStreamingHTML generates streaming HTML that fetches session data via JavaScript.
+// Unlike ConvertSessionToHTML which embeds all content, this generates lightweight HTML (~10KB)
+// that streams content from the log file. The HTML must be served via HTTP (not file://).
+//
+// Output is written to session.log.streaming.html
+func ConvertSessionToStreamingHTML(sessionLogPath string) (string, error) {
+	// Validate input file exists
+	if _, err := os.Stat(sessionLogPath); os.IsNotExist(err) {
+		return "", fmt.Errorf("session.log not found: %s", sessionLogPath)
+	}
+
+	// Generate streaming HTML that references the log file
+	logFileName := filepath.Base(sessionLogPath)
+	htmlContent, err := playback.RenderStreamingHTML(playback.StreamingOptions{
+		Title:   logFileName,
+		DataURL: "./" + logFileName,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to generate streaming HTML: %w", err)
+	}
+
+	// Output path: session.log.streaming.html
+	outputPath := sessionLogPath + ".streaming.html"
+
+	// Write HTML to file
+	err = os.WriteFile(outputPath, []byte(htmlContent), 0644)
+	if err != nil {
+		return "", fmt.Errorf("failed to write HTML file: %w", err)
+	}
+
+	return outputPath, nil
+}
