@@ -73,7 +73,7 @@ func RenderStreamingPlaybackHTML(opts StreamingOptions) (string, error) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>` + escapedTitle + `</title>
   <!-- xterm.js CSS -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.5.0/css/xterm.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.css" />
   <style>
     * {
       margin: 0;
@@ -131,7 +131,7 @@ func RenderStreamingPlaybackHTML(opts StreamingOptions) (string, error) {
   </div>
 
   <!-- xterm.js script -->
-  <script src="https://cdn.jsdelivr.net/npm/xterm@5.5.0/lib/xterm.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.js"></script>
 
   <script>
     // Data URL to fetch session content from
