@@ -227,12 +227,15 @@ func RenderStreamingPlaybackHTML(opts StreamingOptions) (string, error) {
       });
       xterm.open(terminalDiv);
 
-      // Block keyboard events except copy shortcut (Cmd+C / Ctrl+C)
+      // Block keyboard events; handle copy shortcut (Cmd+C / Ctrl+C) via Clipboard API
       xterm.attachCustomKeyEventHandler((event) => {
-        if ((event.metaKey || event.ctrlKey) && event.key === 'c') {
-          return true; // Allow copy
+        if ((event.metaKey || event.ctrlKey) && event.key === 'c' && event.type === 'keydown') {
+          const selection = xterm.getSelection();
+          if (selection) {
+            navigator.clipboard.writeText(selection);
+          }
         }
-        return false; // Block all other keys
+        return false; // Block all keys from xterm processing
       });
 
       // Block wheel events - let the page scroll instead of terminal
