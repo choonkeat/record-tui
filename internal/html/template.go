@@ -153,8 +153,13 @@ func RenderPlaybackHTML(frames []PlaybackFrame, title string, footerLink FooterL
     });
     xterm.open(terminalDiv);
 
-    // Block all keyboard events from xterm processing
-    xterm.attachCustomKeyEventHandler(() => false);
+    // Block keyboard events except copy shortcut (Cmd+C / Ctrl+C)
+    xterm.attachCustomKeyEventHandler((event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === 'c') {
+        return true; // Allow copy
+      }
+      return false; // Block all other keys
+    });
 
     // Block wheel events - let the page scroll instead of terminal
     xterm.attachCustomWheelEventHandler(() => false);
