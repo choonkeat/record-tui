@@ -153,25 +153,17 @@ func RenderPlaybackHTML(frames []PlaybackFrame, title string, footerLink FooterL
     });
     xterm.open(terminalDiv);
 
-    // Block keyboard events; handle copy shortcut (Cmd+C / Ctrl+C) via Clipboard API
+    // Block keyboard input but allow copy shortcut to pass through to browser
     xterm.attachCustomKeyEventHandler((event) => {
-      if ((event.metaKey || event.ctrlKey) && event.key === 'c' && event.type === 'keydown') {
-        const selection = xterm.getSelection();
-        if (selection) {
-          navigator.clipboard.writeText(selection);
-        }
+      // Allow Cmd+C / Ctrl+C to be handled by browser's native copy
+      if ((event.metaKey || event.ctrlKey) && event.key === 'c') {
+        return true;
       }
-      return false; // Block all keys from xterm processing
+      return false; // Block all other keys from xterm processing
     });
 
     // Block wheel events - let the page scroll instead of terminal
     xterm.attachCustomWheelEventHandler(() => false);
-
-    // Disable textarea to prevent focus capture and soft keyboard
-    const terminalTextarea = document.querySelector('.xterm textarea');
-    if (terminalTextarea) {
-      terminalTextarea.setAttribute('disabled', 'true');
-    }
 
     // Hide loading indicator and display content
     document.getElementById('loading').style.display = 'none';
