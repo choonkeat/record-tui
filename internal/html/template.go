@@ -162,6 +162,16 @@ func RenderPlaybackHTML(frames []PlaybackFrame, title string, footerLink FooterL
       return false; // Block all other keys from xterm processing
     });
 
+    // Intercept copy events to trim trailing whitespace from each line
+    document.addEventListener('copy', (event) => {
+      const selection = xterm.getSelection();
+      if (selection) {
+        const cleaned = selection.split('\n').map(line => line.trimEnd()).join('\n');
+        event.clipboardData.setData('text/plain', cleaned);
+        event.preventDefault();
+      }
+    });
+
     // Block wheel events - let the page scroll instead of terminal
     xterm.attachCustomWheelEventHandler(() => false);
 
