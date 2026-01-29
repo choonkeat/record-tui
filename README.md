@@ -4,6 +4,24 @@ Record terminal sessions and convert them to beautiful standalone HTML with xter
 
 **See [example output](https://record-tui.netlify.app)** - recorded `claude` session with ANSI colors and terminal emulation.
 
+## How I use it
+
+`claude` on my computer is not the claude cli, but this wrapper script
+
+```bash
+#/bin/bash
+
+set -xefo pipefail
+
+record-tui ~/.local/bin/claude $*
+```
+
+so all claude conversations are recorded. if there were any good ones i'd like to share, i can share the pdf or html.
+
+This is also used as a library in https://github.com/choonkeat/swe-swe to power the view "recordings" feature. 
+i.e. all sessions in swe-swe are recorded, good ones can be kept easily.
+
+
 ## Requirements
 
 **macOS only** — requires `script` and `open` commands (both built into macOS).
