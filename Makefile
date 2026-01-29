@@ -1,4 +1,4 @@
-.PHONY: build build-all clean clean-compare-output test test-go test-js compare-output install info install-pdf-tool
+.PHONY: build build-all clean clean-compare-output test test-go test-js compare-output install info install-pdf-tool public/index.html
 
 # Build record-tui binary
 build:
@@ -51,6 +51,11 @@ install-pdf-tool:
 	sed 's|@REPO_DIR@|'$(PWD)'|g' cmd/to-pdf/to-pdf.sh > ~/bin/to-pdf
 	chmod +x ~/bin/to-pdf
 	@echo "✓ PDF conversion tool installed to ~/bin/to-pdf"
+
+# Generate public/index.html from public/session.log
+public/index.html: build
+	./bin/record-tui -convert public/session.log
+	cp public/session.log.html public/index.html
 
 # Clean build artifacts
 clean:
