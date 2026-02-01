@@ -57,6 +57,10 @@ func StripMetadata(content string) string {
 	}
 	content = strings.Join(lines[startIndex:endIndex], "\n")
 
+	// Neutralize alternate screen buffer sequences first (before clear handling)
+	// so it can find clear sequences that precede alt screen transitions
+	content = NeutralizeAltScreenSequences(content)
+
 	// Neutralize clear sequences so content before clears is preserved
 	content = NeutralizeClearSequences(content)
 

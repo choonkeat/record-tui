@@ -185,6 +185,7 @@ func RenderStreamingPlaybackHTML(opts StreamingOptions) (string, error) {
           foreground: '#d4d4d4',
         },
         allowProposedApi: true,
+        allowAlternateScreen: false,
       });
       xterm.open(terminalDiv);
 

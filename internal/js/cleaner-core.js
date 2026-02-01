@@ -14,9 +14,17 @@
 // - Browser streaming (TextDecoder with UTF-8)
 const CLEAR_SEPARATOR = '\n\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 terminal cleared \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\n';
 
-// Clear sequence pattern - must match Go's clearPattern in clear.go:16
+// Clear sequence pattern - must match Go's clearPattern in clear.go
 // Matches: \x1b[H\x1b[2J, \x1b[H\x1b[3J, \x1b[2J\x1b[H, \x1b[3J\x1b[H, \x1b[2J, \x1b[3J
-const clearPattern = /\x1b\[H\x1b\[[23]J|\x1b\[[23]J\x1b\[H|\x1b\[[23]J/g;
+// Also: \x1b[1;1H\x1b[J, \x1b[H\x1b[J, \x1b[1;1H\x1b[0J (home + erase to end = effective clear)
+const clearPattern = /\x1b\[(?:1;1)?H\x1b\[(?:0?J|[23]J)|\x1b\[[23]J\x1b\[H|\x1b\[[23]J/g;
+
+// Alt screen separator - must match Go's AltScreenSeparator in clear.go
+const ALT_SCREEN_SEPARATOR = '\n\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 alternate screen \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\n';
+
+// Alt screen pattern - must match Go's altScreenPattern in clear.go
+// Matches: \x1b[?1049h, \x1b[?1049l, \x1b[?47h, \x1b[?47l, \x1b[?1047h, \x1b[?1047l
+const altScreenPattern = /\x1b\[\?(1049|47|1047)([hl])/g;
 
 /**
  * Strip header lines from session content.
@@ -114,6 +122,10 @@ function createStreamingCleaner(onOutput) {
   // This whitespace should be prepended to the next non-empty content (after the separator)
   let pendingWhitespace = '';
 
+  // Alt screen state - when inside alt screen, discard all content
+  let inAltScreen = false;
+  let altScreenHadContentBefore = false;
+
   // Buffer for incomplete escape sequences at chunk boundaries
   let escapeBuffer = '';
 
@@ -207,6 +219,76 @@ function createStreamingCleaner(onOutput) {
   }
 
   /**
+   * Process text for alternate screen sequences, respecting streaming state.
+   * Content between enter and leave is discarded (TUI cursor-positioned content
+   * would corrupt the main screen). A separator is inserted at the leave point
+   * when there's content on both sides.
+   */
+  function processForAltScreen(text) {
+    if (!text) return '';
+
+    // If we're inside alt screen, check for leave sequence
+    if (inAltScreen) {
+      altScreenPattern.lastIndex = 0;
+      const matches = [];
+      let m;
+      while ((m = altScreenPattern.exec(text)) !== null) {
+        if (m[2] === 'l') {
+          matches.push({ start: m.index, end: m.index + m[0].length });
+        }
+      }
+
+      if (matches.length === 0) {
+        // Still inside alt screen — discard everything
+        return '';
+      }
+
+      // Found leave — discard everything before it, emit separator + rest
+      const firstLeave = matches[0];
+      inAltScreen = false;
+      const remaining = text.slice(firstLeave.end);
+
+      // Recursively process remaining (might have more enter/leave pairs)
+      const processed = processForAltScreen(remaining);
+      if (altScreenHadContentBefore && processed.trim() !== '') {
+        return ALT_SCREEN_SEPARATOR + processed;
+      }
+      return processed;
+    }
+
+    // Not inside alt screen — look for enter sequence
+    altScreenPattern.lastIndex = 0;
+    const matches = [];
+    let m;
+    while ((m = altScreenPattern.exec(text)) !== null) {
+      if (m[2] === 'h') {
+        matches.push({ start: m.index, end: m.index + m[0].length });
+        break; // Only need the first enter
+      }
+    }
+
+    if (matches.length === 0) {
+      // No alt screen sequences
+      if (text.trim() !== '') {
+        altScreenHadContentBefore = true;
+      }
+      return text;
+    }
+
+    // Found enter — keep content before, discard after until leave
+    const before = text.slice(0, matches[0].start);
+    if (before.trim() !== '') {
+      altScreenHadContentBefore = true;
+    }
+    inAltScreen = true;
+
+    // Process remaining after enter (might contain leave in same chunk)
+    const afterEnter = text.slice(matches[0].end);
+    const processed = processForAltScreen(afterEnter);
+    return before + processed;
+  }
+
+  /**
    * Feed a chunk of data to the cleaner.
    * May invoke onOutput zero or more times.
    */
@@ -248,7 +330,8 @@ function createStreamingCleaner(onOutput) {
     if (text.length > TRAILING_SIZE) {
       const toEmit = text.slice(0, -TRAILING_SIZE);
       trailingBuffer = text.slice(-TRAILING_SIZE);
-      const processed = processForClears(toEmit);
+      let processed = processForClears(toEmit);
+      processed = processForAltScreen(processed);
       if (processed) onOutput(processed);
     } else {
       trailingBuffer = text;
@@ -272,8 +355,9 @@ function createStreamingCleaner(onOutput) {
     // Strip footer from final content
     text = stripFooter(text);
 
-    // Process for clears and emit
-    const processed = processForClears(text);
+    // Process for clears and alt screen, then emit
+    let processed = processForClears(text);
+    processed = processForAltScreen(processed);
     if (processed) onOutput(processed);
   }
 
@@ -284,7 +368,9 @@ function createStreamingCleaner(onOutput) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     CLEAR_SEPARATOR,
+    ALT_SCREEN_SEPARATOR,
     clearPattern,
+    altScreenPattern,
     stripHeader,
     stripFooter,
     createStreamingCleaner

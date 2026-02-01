@@ -159,6 +159,149 @@ func TestNeutralizeClearSequences_OnlyClears(t *testing.T) {
 	}
 }
 
+// === Alt Screen Tests ===
+
+func TestNeutralizeAltScreenSequences_SimpleAltScreen(t *testing.T) {
+	// Enter and leave alternate screen with content on both sides
+	// Content between enter/leave is discarded (TUI cursor content)
+	input := "before\x1b[?1049hTUI content\x1b[?1049lafter"
+
+	result := NeutralizeAltScreenSequences(input)
+
+	if !strings.Contains(result, "before") {
+		t.Errorf("Result should contain 'before', got: %q", result)
+	}
+	if strings.Contains(result, "TUI content") {
+		t.Errorf("Result should NOT contain 'TUI content' (discarded), got: %q", result)
+	}
+	if !strings.Contains(result, "after") {
+		t.Errorf("Result should contain 'after', got: %q", result)
+	}
+	if !strings.Contains(result, "alternate screen") {
+		t.Errorf("Result should contain separator 'alternate screen', got: %q", result)
+	}
+	// Should NOT contain the escape sequences
+	if strings.Contains(result, "\x1b[?1049h") || strings.Contains(result, "\x1b[?1049l") {
+		t.Errorf("Result should not contain alt screen sequences")
+	}
+}
+
+func TestNeutralizeAltScreenSequences_NoSequences(t *testing.T) {
+	input := "normal content\nwith newlines\nno alt screen"
+
+	result := NeutralizeAltScreenSequences(input)
+
+	if result != input {
+		t.Errorf("Result should be unchanged, got: %q", result)
+	}
+}
+
+func TestNeutralizeAltScreenSequences_AtStart(t *testing.T) {
+	// Alt screen at start — no content before, so no separator
+	input := "\x1b[?1049hTUI content\x1b[?1049lafter"
+
+	result := NeutralizeAltScreenSequences(input)
+
+	if strings.Contains(result, "TUI content") {
+		t.Errorf("Result should NOT contain 'TUI content' (discarded), got: %q", result)
+	}
+	if !strings.Contains(result, "after") {
+		t.Errorf("Result should contain 'after', got: %q", result)
+	}
+	// No separator — no content before alt screen
+	if strings.Contains(result, "alternate screen") {
+		t.Errorf("Result should NOT contain separator (no content before), got: %q", result)
+	}
+}
+
+func TestNeutralizeAltScreenSequences_AtEnd(t *testing.T) {
+	// Alt screen leave at end — no content after, so no separator
+	input := "before\x1b[?1049hTUI content\x1b[?1049l"
+
+	result := NeutralizeAltScreenSequences(input)
+
+	if !strings.Contains(result, "before") {
+		t.Errorf("Result should contain 'before', got: %q", result)
+	}
+	if strings.Contains(result, "TUI content") {
+		t.Errorf("Result should NOT contain 'TUI content' (discarded), got: %q", result)
+	}
+	// Should not end with separator
+	if strings.HasSuffix(strings.TrimSpace(result), "────") {
+		t.Errorf("Result should not end with separator, got: %q", result)
+	}
+}
+
+func TestNeutralizeAltScreenSequences_OlderVariants(t *testing.T) {
+	// Test \x1b[?47h/l variant — TUI content is discarded
+	input := "before\x1b[?47hTUI\x1b[?47lafter"
+	result := NeutralizeAltScreenSequences(input)
+
+	if !strings.Contains(result, "before") || !strings.Contains(result, "after") {
+		t.Errorf("Should handle ?47 variant, got: %q", result)
+	}
+	if strings.Contains(result, "\x1b[?47") {
+		t.Errorf("Result should not contain alt screen sequences")
+	}
+
+	// Test \x1b[?1047h/l variant
+	input = "before\x1b[?1047hTUI\x1b[?1047lafter"
+	result = NeutralizeAltScreenSequences(input)
+
+	if !strings.Contains(result, "before") || !strings.Contains(result, "after") {
+		t.Errorf("Should handle ?1047 variant, got: %q", result)
+	}
+	if strings.Contains(result, "\x1b[?1047") {
+		t.Errorf("Result should not contain alt screen sequences")
+	}
+}
+
+func TestNeutralizeAltScreenSequences_CombinedWithClear(t *testing.T) {
+	// Alt screen combined with clear sequences — alt screen runs first (as in cleaner.go)
+	// Content from last clear before alt screen enter through alt screen leave is discarded
+	input := "before\x1b[2Jmiddle\x1b[?1049hTUI\x1b[?1049lafter"
+
+	// Apply alt screen first, then clears (as cleaner.go does)
+	result := NeutralizeAltScreenSequences(input)
+	result = NeutralizeClearSequences(result)
+
+	if !strings.Contains(result, "before") {
+		t.Errorf("Result should contain 'before', got: %q", result)
+	}
+	// 'middle' is between the clear and alt screen enter, so it's discarded
+	// (clear is the strip point for alt screen)
+	if strings.Contains(result, "middle") {
+		t.Errorf("Result should NOT contain 'middle' (discarded with TUI content), got: %q", result)
+	}
+	if strings.Contains(result, "TUI") {
+		t.Errorf("Result should NOT contain 'TUI' (discarded), got: %q", result)
+	}
+	if !strings.Contains(result, "after") {
+		t.Errorf("Result should contain 'after', got: %q", result)
+	}
+}
+
+func TestNeutralizeAltScreenSequences_PreservesOtherANSI(t *testing.T) {
+	// ANSI sequences outside alt screen should be preserved
+	input := "\x1b[31mred\x1b[0m\x1b[?1049hTUI\x1b[?1049l\x1b[32mgreen\x1b[0m"
+
+	result := NeutralizeAltScreenSequences(input)
+
+	if !strings.Contains(result, "\x1b[31m") {
+		t.Errorf("Result should preserve red color, got: %q", result)
+	}
+	if !strings.Contains(result, "\x1b[32m") {
+		t.Errorf("Result should preserve green color, got: %q", result)
+	}
+	if strings.Contains(result, "\x1b[?1049") {
+		t.Errorf("Result should not contain alt screen sequences")
+	}
+	// TUI content between enter/leave is discarded
+	if strings.Contains(result, "TUI") {
+		t.Errorf("Result should NOT contain 'TUI' (discarded), got: %q", result)
+	}
+}
+
 func TestNeutralizeClearSequences_PreservesOtherANSI(t *testing.T) {
 	// Other ANSI sequences (colors, etc.) should be preserved
 	input := "\x1b[31mred text\x1b[0m\x1b[2J\x1b[32mgreen text\x1b[0m"

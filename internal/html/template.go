@@ -145,11 +145,13 @@ func RenderPlaybackHTML(frames []PlaybackFrame, title string, footerLink FooterL
       disableStdin: true,
       altClickMovesCursor: false,
       scrollOnUserInput: false,
+      scrollback: 100000,
       theme: {
         background: '#1e1e1e',
         foreground: '#d4d4d4',
       },
       allowProposedApi: true,
+      allowAlternateScreen: false,
     });
     xterm.open(terminalDiv);
 
@@ -207,6 +209,9 @@ func RenderPlaybackHTML(frames []PlaybackFrame, title string, footerLink FooterL
       if (actualHeight < estimatedRows) {
         xterm.resize(contentCols, actualHeight);
       }
+
+      // Scroll to the top so content is visible from the start
+      xterm.scrollToTop();
     }, 0);
   </script>
 </body>
