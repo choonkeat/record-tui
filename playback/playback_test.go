@@ -327,9 +327,8 @@ func TestRenderStreamingHTML_ContainsStreamingFunctions(t *testing.T) {
 	functions := []string{
 		"stripHeader",
 		"stripFooter",
-		"neutralizeClearSequences",
+		"createStreamingCleaner",
 		"streamSession",
-		"resizeToFitContent",
 	}
 	for _, fn := range functions {
 		if !strings.Contains(html, "function "+fn) {

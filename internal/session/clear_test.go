@@ -159,6 +159,85 @@ func TestNeutralizeClearSequences_OnlyClears(t *testing.T) {
 	}
 }
 
+// === Home+Erase Clear Pattern Tests ===
+
+func TestNeutralizeClearSequences_HomeErase(t *testing.T) {
+	// \x1b[H\x1b[J is "home then erase to end of screen"
+	input := "first half\x1b[H\x1b[Jsecond half"
+
+	result := NeutralizeClearSequences(input)
+
+	if !strings.Contains(result, "first half") {
+		t.Errorf("Result should contain 'first half', got: %q", result)
+	}
+	if !strings.Contains(result, "second half") {
+		t.Errorf("Result should contain 'second half', got: %q", result)
+	}
+	if !strings.Contains(result, "terminal cleared") {
+		t.Errorf("Result should contain separator, got: %q", result)
+	}
+	if strings.Contains(result, "\x1b[H\x1b[J") {
+		t.Errorf("Result should not contain home+erase sequence")
+	}
+}
+
+func TestNeutralizeClearSequences_ExplicitHomeErase(t *testing.T) {
+	// \x1b[1;1H\x1b[J is "explicit row 1, col 1 home then erase to end"
+	input := "first half\x1b[1;1H\x1b[Jsecond half"
+
+	result := NeutralizeClearSequences(input)
+
+	if !strings.Contains(result, "first half") {
+		t.Errorf("Result should contain 'first half', got: %q", result)
+	}
+	if !strings.Contains(result, "second half") {
+		t.Errorf("Result should contain 'second half', got: %q", result)
+	}
+	if !strings.Contains(result, "terminal cleared") {
+		t.Errorf("Result should contain separator, got: %q", result)
+	}
+	if strings.Contains(result, "\x1b[1;1H") {
+		t.Errorf("Result should not contain explicit home sequence")
+	}
+}
+
+func TestNeutralizeClearSequences_HomeEraseZero(t *testing.T) {
+	// \x1b[H\x1b[0J is "home then erase to end (explicit 0 parameter)"
+	input := "first half\x1b[H\x1b[0Jsecond half"
+
+	result := NeutralizeClearSequences(input)
+
+	if !strings.Contains(result, "first half") {
+		t.Errorf("Result should contain 'first half', got: %q", result)
+	}
+	if !strings.Contains(result, "second half") {
+		t.Errorf("Result should contain 'second half', got: %q", result)
+	}
+	if !strings.Contains(result, "terminal cleared") {
+		t.Errorf("Result should contain separator, got: %q", result)
+	}
+	if strings.Contains(result, "\x1b[H\x1b[0J") {
+		t.Errorf("Result should not contain home+erase sequence")
+	}
+}
+
+func TestNeutralizeClearSequences_ExplicitHomeEraseTwo(t *testing.T) {
+	// \x1b[1;1H\x1b[2J is "explicit home then clear entire screen"
+	input := "first half\x1b[1;1H\x1b[2Jsecond half"
+
+	result := NeutralizeClearSequences(input)
+
+	if !strings.Contains(result, "first half") {
+		t.Errorf("Result should contain 'first half', got: %q", result)
+	}
+	if !strings.Contains(result, "second half") {
+		t.Errorf("Result should contain 'second half', got: %q", result)
+	}
+	if !strings.Contains(result, "terminal cleared") {
+		t.Errorf("Result should contain separator, got: %q", result)
+	}
+}
+
 // === Alt Screen Tests ===
 
 func TestNeutralizeAltScreenSequences_SimpleAltScreen(t *testing.T) {
