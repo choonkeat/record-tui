@@ -1,8 +1,12 @@
 package playback
 
 import (
+	"io"
+
 	"github.com/choonkeat/record-tui/internal/html"
 	"github.com/choonkeat/record-tui/internal/session"
+	"github.com/choonkeat/record-tui/internal/timing"
+	"github.com/choonkeat/record-tui/internal/toc"
 )
 
 // StripMetadata removes script command header/footer metadata from session log content.
@@ -45,6 +49,7 @@ func RenderHTML(frames []Frame, opts ...Options) (string, error) {
 	// Extract options
 	title := "Terminal"
 	var footerLink html.FooterLink
+	var tocEntries []html.TOCEntry
 	if len(opts) > 0 {
 		if opts[0].Title != "" {
 			title = opts[0].Title
@@ -53,9 +58,15 @@ func RenderHTML(frames []Frame, opts ...Options) (string, error) {
 			Text: opts[0].FooterLink.Text,
 			URL:  opts[0].FooterLink.URL,
 		}
+		for _, e := range opts[0].TOC {
+			tocEntries = append(tocEntries, html.TOCEntry{
+				Label: e.Label,
+				Line:  e.Line,
+			})
+		}
 	}
 
-	return html.RenderPlaybackHTML(internalFrames, title, footerLink)
+	return html.RenderPlaybackHTML(internalFrames, title, footerLink, tocEntries)
 }
 
 // RenderStreamingHTML generates an HTML page that streams terminal data from a URL.
@@ -76,7 +87,54 @@ func RenderHTML(frames []Frame, opts ...Options) (string, error) {
 //	    Title:   "My Recording",
 //	    DataURL: "./session.log",
 //	})
+// BuildTOC generates table-of-contents entries from a timing file, input file,
+// and session log content. Returns nil if parsing fails or no commands are found.
+//
+// Parameters:
+//   - timingReader: reader for the timing file (advanced format with I/O/H/S markers)
+//   - inputContent: raw bytes from the session.input file (may include script metadata)
+//   - sessionContent: raw bytes from the session.log file (may include script metadata)
+//
+// Both inputContent and sessionContent have their script header/footer stripped
+// automatically before processing.
+//
+// Example:
+//
+//	timingFile, _ := os.Open("session.timing")
+//	inputBytes, _ := os.ReadFile("session.input")
+//	sessionBytes, _ := os.ReadFile("session.log")
+//	tocEntries := playback.BuildTOC(timingFile, inputBytes, sessionBytes)
+func BuildTOC(timingReader io.Reader, inputContent []byte, sessionContent []byte) []TOCEntry {
+	entries, err := timing.Parse(timingReader)
+	if err != nil {
+		return nil
+	}
+
+	strippedInput := []byte(session.StripMetadataOnly(string(inputContent)))
+	commands := timing.ExtractCommands(entries, strippedInput)
+	if len(commands) == 0 {
+		return nil
+	}
+
+	rawOutput := []byte(session.StripMetadataOnly(string(sessionContent)))
+	tocRaw := toc.FromCommands(commands, rawOutput)
+
+	result := make([]TOCEntry, len(tocRaw))
+	for i, e := range tocRaw {
+		result[i] = TOCEntry{Label: e.Label, Line: e.Line}
+	}
+	return result
+}
+
 func RenderStreamingHTML(opts StreamingOptions) (string, error) {
+	var tocEntries []html.TOCEntry
+	for _, e := range opts.TOC {
+		tocEntries = append(tocEntries, html.TOCEntry{
+			Label: e.Label,
+			Line:  e.Line,
+		})
+	}
+
 	internalOpts := html.StreamingOptions{
 		Title:   opts.Title,
 		DataURL: opts.DataURL,
@@ -86,6 +144,7 @@ func RenderStreamingHTML(opts StreamingOptions) (string, error) {
 		},
 		Cols:    opts.Cols,
 		MaxRows: opts.MaxRows,
+		TOC:     tocEntries,
 	}
 	return html.RenderStreamingPlaybackHTML(internalOpts)
 }

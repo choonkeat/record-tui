@@ -223,3 +223,105 @@ Script done on Wed Dec 31 12:11:00 2025
 
 	t.Logf("✓ ANSI codes preserved in HTML")
 }
+
+// TestConvertSessionToHTML_WithTimingAndInput tests TOC generation when timing/input files exist
+func TestConvertSessionToHTML_WithTimingAndInput(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create session.log
+	sessionLogPath := filepath.Join(tmpDir, "session.log")
+	sessionContent := "Script started on 2026-01-12 06:41:43+00:00 [COMMAND=\"bash\"]\n" +
+		"$ ls\nfile1\nfile2\n$ npm test\nPASS\nScript done on 2026-01-12 06:45:00+00:00 [COMMAND_EXIT_STATUS=\"0\"]\n"
+	err := os.WriteFile(sessionLogPath, []byte(sessionContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create session.log: %v", err)
+	}
+
+	// Create session.timing (advanced format)
+	timingPath := filepath.Join(tmpDir, "session.timing")
+	timingContent := "O 0.010 4\nI 0.500 3\nO 0.010 18\nI 1.000 9\nO 0.010 5\n"
+	err = os.WriteFile(timingPath, []byte(timingContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create session.timing: %v", err)
+	}
+
+	// Create session.input
+	inputPath := filepath.Join(tmpDir, "session.input")
+	inputContent := "ls\rnpm test\r"
+	err = os.WriteFile(inputPath, []byte(inputContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create session.input: %v", err)
+	}
+
+	// Convert to HTML
+	htmlPath, err := ConvertSessionToHTML(sessionLogPath)
+	if err != nil {
+		t.Fatalf("ConvertSessionToHTML failed: %v", err)
+	}
+
+	// Read HTML and check for TOC elements
+	htmlBytes, err := os.ReadFile(htmlPath)
+	if err != nil {
+		t.Fatalf("Failed to read HTML: %v", err)
+	}
+	htmlString := string(htmlBytes)
+
+	if !strings.Contains(htmlString, `id="toc-toggle"`) {
+		t.Error("HTML should contain TOC toggle button")
+	}
+	if !strings.Contains(htmlString, `id="toc-panel"`) {
+		t.Error("HTML should contain TOC panel")
+	}
+	if !strings.Contains(htmlString, ">ls</a>") {
+		t.Error("HTML should contain 'ls' in TOC")
+	}
+	if !strings.Contains(htmlString, ">npm test</a>") {
+		t.Error("HTML should contain 'npm test' in TOC")
+	}
+}
+
+// TestConvertSessionToHTML_WithoutTimingFiles tests graceful degradation when no timing files exist
+func TestConvertSessionToHTML_WithoutTimingFiles(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	sessionLogPath := filepath.Join(tmpDir, "session.log")
+	sessionContent := "Script started on Wed Dec 31 12:10:34 2025\nCommand: bash\nhello\nScript done on Wed Dec 31 12:11:00 2025\n"
+	err := os.WriteFile(sessionLogPath, []byte(sessionContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create session.log: %v", err)
+	}
+
+	htmlPath, err := ConvertSessionToHTML(sessionLogPath)
+	if err != nil {
+		t.Fatalf("ConvertSessionToHTML failed: %v", err)
+	}
+
+	htmlBytes, _ := os.ReadFile(htmlPath)
+	htmlString := string(htmlBytes)
+
+	// Should NOT have TOC when no timing files
+	if strings.Contains(htmlString, `id="toc-toggle"`) {
+		t.Error("HTML should NOT contain TOC when no timing files")
+	}
+}
+
+// TestDeriveCompanionPath tests the path derivation helper
+func TestDeriveCompanionPath(t *testing.T) {
+	tests := []struct {
+		logPath  string
+		ext      string
+		expected string
+	}{
+		{"/path/session.log", ".timing", "/path/session.timing"},
+		{"/path/session.log", ".input", "/path/session.input"},
+		{"/path/session-abc123.log", ".timing", "/path/session-abc123.timing"},
+		{"/path/noext", ".timing", "/path/noext.timing"},
+	}
+
+	for _, tt := range tests {
+		got := deriveCompanionPath(tt.logPath, tt.ext)
+		if got != tt.expected {
+			t.Errorf("deriveCompanionPath(%q, %q) = %q, want %q", tt.logPath, tt.ext, got, tt.expected)
+		}
+	}
+}

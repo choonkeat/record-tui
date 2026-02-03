@@ -15,7 +15,7 @@ func TestRenderPlaybackHTML_WithFrames(t *testing.T) {
 		},
 	}
 
-	html, err := RenderPlaybackHTML(frames, "", FooterLink{})
+	html, err := RenderPlaybackHTML(frames, "", FooterLink{}, nil)
 	if err != nil {
 		t.Fatalf("RenderPlaybackHTML failed: %v", err)
 	}
@@ -46,7 +46,7 @@ func TestRenderPlaybackHTML_ValidBase64Encoding(t *testing.T) {
 		},
 	}
 
-	html, err := RenderPlaybackHTML(frames, "", FooterLink{})
+	html, err := RenderPlaybackHTML(frames, "", FooterLink{}, nil)
 	if err != nil {
 		t.Fatalf("RenderPlaybackHTML failed: %v", err)
 	}
@@ -105,7 +105,7 @@ func TestRenderPlaybackHTML_MultipleFrames(t *testing.T) {
 		},
 	}
 
-	html, err := RenderPlaybackHTML(frames, "", FooterLink{})
+	html, err := RenderPlaybackHTML(frames, "", FooterLink{}, nil)
 	if err != nil {
 		t.Fatalf("RenderPlaybackHTML failed: %v", err)
 	}
@@ -134,7 +134,7 @@ func TestRenderPlaybackHTML_ANSICodes(t *testing.T) {
 		},
 	}
 
-	html, err := RenderPlaybackHTML(frames, "", FooterLink{})
+	html, err := RenderPlaybackHTML(frames, "", FooterLink{}, nil)
 	if err != nil {
 		t.Fatalf("RenderPlaybackHTML failed: %v", err)
 	}
@@ -159,7 +159,7 @@ func TestRenderPlaybackHTML_ANSICodes(t *testing.T) {
 func TestRenderPlaybackHTML_EmptyFrames(t *testing.T) {
 	frames := []PlaybackFrame{}
 
-	html, err := RenderPlaybackHTML(frames, "", FooterLink{})
+	html, err := RenderPlaybackHTML(frames, "", FooterLink{}, nil)
 	if err != nil {
 		t.Fatalf("RenderPlaybackHTML failed: %v", err)
 	}
@@ -188,7 +188,7 @@ func TestRenderPlaybackHTML_EmptyFrames(t *testing.T) {
 func TestRenderPlaybackHTML_DefaultFooter(t *testing.T) {
 	frames := []PlaybackFrame{{Timestamp: 0, Content: "test"}}
 
-	html, err := RenderPlaybackHTML(frames, "", FooterLink{})
+	html, err := RenderPlaybackHTML(frames, "", FooterLink{}, nil)
 	if err != nil {
 		t.Fatalf("RenderPlaybackHTML failed: %v", err)
 	}
@@ -212,7 +212,7 @@ func TestRenderPlaybackHTML_WithFooterLink(t *testing.T) {
 		Text: "swe-swe",
 		URL:  "https://github.com/choonkeat/swe-swe",
 	}
-	html, err := RenderPlaybackHTML(frames, "", footerLink)
+	html, err := RenderPlaybackHTML(frames, "", footerLink, nil)
 	if err != nil {
 		t.Fatalf("RenderPlaybackHTML failed: %v", err)
 	}
@@ -240,7 +240,7 @@ func TestRenderPlaybackHTML_FooterLinkEscaping(t *testing.T) {
 		Text: "<script>alert('xss')</script>",
 		URL:  "https://example.com?a=1&b=2",
 	}
-	html, err := RenderPlaybackHTML(frames, "", footerLink)
+	html, err := RenderPlaybackHTML(frames, "", footerLink, nil)
 	if err != nil {
 		t.Fatalf("RenderPlaybackHTML failed: %v", err)
 	}
@@ -258,7 +258,7 @@ func TestRenderPlaybackHTML_FooterLinkEscaping(t *testing.T) {
 func TestRenderPlaybackHTML_ContainsLoadingIndicator(t *testing.T) {
 	frames := []PlaybackFrame{{Timestamp: 0, Content: "test"}}
 
-	html, err := RenderPlaybackHTML(frames, "", FooterLink{})
+	html, err := RenderPlaybackHTML(frames, "", FooterLink{}, nil)
 	if err != nil {
 		t.Fatalf("RenderPlaybackHTML failed: %v", err)
 	}
@@ -273,5 +273,72 @@ func TestRenderPlaybackHTML_ContainsLoadingIndicator(t *testing.T) {
 	// Should hide loading indicator before writing content
 	if !strings.Contains(html, `getElementById('loading').style.display = 'none'`) {
 		t.Error("HTML should hide loading indicator")
+	}
+}
+
+func TestRenderPlaybackHTML_WithTOC(t *testing.T) {
+	frames := []PlaybackFrame{{Timestamp: 0, Content: "test"}}
+	toc := []TOCEntry{
+		{Label: "ls", Line: 0},
+		{Label: "npm test", Line: 42},
+	}
+
+	html, err := RenderPlaybackHTML(frames, "", FooterLink{}, toc)
+	if err != nil {
+		t.Fatalf("RenderPlaybackHTML failed: %v", err)
+	}
+
+	// Should contain TOC toggle button
+	if !strings.Contains(html, `id="toc-toggle"`) {
+		t.Error("HTML should contain TOC toggle button")
+	}
+	// Should contain TOC panel
+	if !strings.Contains(html, `id="toc-panel"`) {
+		t.Error("HTML should contain TOC panel")
+	}
+	// Should contain command labels
+	if !strings.Contains(html, ">ls</a>") {
+		t.Error("HTML should contain 'ls' command in TOC")
+	}
+	if !strings.Contains(html, ">npm test</a>") {
+		t.Error("HTML should contain 'npm test' command in TOC")
+	}
+	// Should contain TOC JS
+	if !strings.Contains(html, "tocEntries") {
+		t.Error("HTML should contain TOC JavaScript")
+	}
+}
+
+func TestRenderPlaybackHTML_WithoutTOC(t *testing.T) {
+	frames := []PlaybackFrame{{Timestamp: 0, Content: "test"}}
+
+	html, err := RenderPlaybackHTML(frames, "", FooterLink{}, nil)
+	if err != nil {
+		t.Fatalf("RenderPlaybackHTML failed: %v", err)
+	}
+
+	// Should NOT contain TOC elements when no entries provided
+	if strings.Contains(html, `id="toc-toggle"`) {
+		t.Error("HTML should not contain TOC toggle when no entries")
+	}
+	if strings.Contains(html, `id="toc-panel"`) {
+		t.Error("HTML should not contain TOC panel when no entries")
+	}
+}
+
+func TestRenderPlaybackHTML_TOCLabelEscaping(t *testing.T) {
+	frames := []PlaybackFrame{{Timestamp: 0, Content: "test"}}
+	toc := []TOCEntry{
+		{Label: `echo "<script>alert('xss')</script>"`, Line: 0},
+	}
+
+	html, err := RenderPlaybackHTML(frames, "", FooterLink{}, toc)
+	if err != nil {
+		t.Fatalf("RenderPlaybackHTML failed: %v", err)
+	}
+
+	// Script tag should be escaped
+	if strings.Contains(html, "<script>alert") {
+		t.Error("TOC label should be HTML escaped")
 	}
 }

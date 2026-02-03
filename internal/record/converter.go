@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/choonkeat/record-tui/playback"
 )
@@ -16,6 +17,9 @@ import (
 // 3. Creates a playback frame with the cleaned content
 // 4. Generates HTML with xterm.js rendering
 // 5. Writes to session.log.html
+//
+// If timing and input files are found alongside the session log, a table-of-contents
+// is generated and embedded in the HTML for navigation.
 //
 // Returns the path to the generated HTML file, or error if any step fails
 func ConvertSessionToHTML(sessionLogPath string) (string, error) {
@@ -44,8 +48,12 @@ func ConvertSessionToHTML(sessionLogPath string) (string, error) {
 		},
 	}
 
+	// Try to generate TOC from timing/input files
+	tocEntries := buildTOC(sessionLogPath, sessionContent)
+
 	// Generate HTML using xterm.js
-	htmlContent, err := playback.RenderHTML(frames)
+	opts := playback.Options{TOC: tocEntries}
+	htmlContent, err := playback.RenderHTML(frames, opts)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate HTML: %w", err)
 	}
@@ -100,8 +108,12 @@ func ConvertSessionToHTMLWithPath(sessionLogPath string, outputPath string) (str
 		},
 	}
 
+	// Try to generate TOC from timing/input files
+	tocEntries := buildTOC(sessionPath, sessionContent)
+
 	// Generate HTML
-	htmlContent, err := playback.RenderHTML(frames)
+	opts := playback.Options{TOC: tocEntries}
+	htmlContent, err := playback.RenderHTML(frames, opts)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate HTML: %w", err)
 	}
@@ -127,13 +139,20 @@ func ConvertSessionToStreamingHTML(sessionLogPath string, maxRows uint32) (strin
 		return "", fmt.Errorf("session.log not found: %s", sessionLogPath)
 	}
 
+	// Try to generate TOC from timing/input files
+	var tocEntries []playback.TOCEntry
+	sessionContent, err := os.ReadFile(sessionLogPath)
+	if err == nil {
+		tocEntries = buildTOC(sessionLogPath, sessionContent)
+	}
+
 	// Generate streaming HTML that references the log file
-	// The HTML uses a large initial viewport and auto-resizes after loading
 	logFileName := filepath.Base(sessionLogPath)
 	htmlContent, err := playback.RenderStreamingHTML(playback.StreamingOptions{
 		Title:   logFileName,
 		DataURL: "./" + logFileName,
 		MaxRows: maxRows,
+		TOC:     tocEntries,
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to generate streaming HTML: %w", err)
@@ -149,4 +168,38 @@ func ConvertSessionToStreamingHTML(sessionLogPath string, maxRows uint32) (strin
 	}
 
 	return outputPath, nil
+}
+
+// buildTOC attempts to build TOC entries from timing and input files alongside the session log.
+// Returns nil if timing or input files are not found or cannot be parsed.
+//
+// Expected file naming convention:
+//   - session.log      → session.timing, session.input
+//   - session-UUID.log → session-UUID.timing, session-UUID.input
+func buildTOC(sessionLogPath string, sessionContent []byte) []playback.TOCEntry {
+	timingPath := deriveCompanionPath(sessionLogPath, ".timing")
+	inputPath := deriveCompanionPath(sessionLogPath, ".input")
+
+	timingFile, err := os.Open(timingPath)
+	if err != nil {
+		return nil
+	}
+	defer timingFile.Close()
+
+	inputBytes, err := os.ReadFile(inputPath)
+	if err != nil {
+		return nil
+	}
+
+	return playback.BuildTOC(timingFile, inputBytes, sessionContent)
+}
+
+// deriveCompanionPath replaces the .log extension with the given extension.
+// e.g., "/path/session.log" + ".timing" → "/path/session.timing"
+// e.g., "/path/session-abc.log" + ".input" → "/path/session-abc.input"
+func deriveCompanionPath(logPath string, ext string) string {
+	if strings.HasSuffix(logPath, ".log") {
+		return logPath[:len(logPath)-4] + ext
+	}
+	return logPath + ext
 }

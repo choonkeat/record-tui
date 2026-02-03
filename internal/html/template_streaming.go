@@ -14,6 +14,7 @@ type StreamingOptions struct {
 	FooterLink FooterLink // Optional co-branding link
 	Cols       uint16     // Terminal columns (0 = auto-detect, default 240)
 	MaxRows    uint32     // Maximum initial rows before auto-resize (0 = default 100000)
+	TOC        []TOCEntry // Optional table-of-contents entries for navigation
 }
 
 // RenderStreamingPlaybackHTML generates an HTML document that streams terminal data from a URL.
@@ -106,11 +107,13 @@ func RenderStreamingPlaybackHTML(opts StreamingOptions) (string, error) {
       color: #ffffff;
       text-decoration: underline;
     }
+` + tocCSS() + `
   </style>
 </head>
 <body>
   <div id="loading">Loading...</div>
   <div id="terminal"></div>
+` + tocHTML(opts.TOC) + `
   <div id="footer">
     ` + footerHTML + `
   </div>
@@ -252,6 +255,7 @@ func RenderStreamingPlaybackHTML(opts StreamingOptions) (string, error) {
     }
 
     main();
+` + tocJS(opts.TOC) + `
   </script>
 </body>
 </html>`
