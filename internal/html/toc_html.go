@@ -8,7 +8,7 @@ import (
 // tocCSS returns the CSS for the floating TOC panel.
 func tocCSS() string {
 	return `
-    #toc-toggle {
+    #userinput-toggle {
       position: fixed;
       top: 12px;
       right: 12px;
@@ -23,12 +23,12 @@ func tocCSS() string {
       border-radius: 4px;
       transition: background 0.2s, border-color 0.2s;
     }
-    #toc-toggle:hover {
+    #userinput-toggle:hover {
       background: rgba(50, 50, 50, 0.95);
       border-color: rgba(212, 212, 212, 0.4);
     }
 
-    #toc-panel {
+    #userinput-panel {
       position: fixed;
       top: 44px;
       right: 12px;
@@ -43,19 +43,19 @@ func tocCSS() string {
       display: none;
       backdrop-filter: blur(8px);
     }
-    #toc-panel.open {
+    #userinput-panel.open {
       display: block;
     }
 
-    #toc-panel ul {
+    #userinput-panel ul {
       list-style: none;
       margin: 0;
       padding: 8px 0;
     }
-    #toc-panel li {
+    #userinput-panel li {
       margin: 0;
     }
-    #toc-panel a {
+    #userinput-panel a {
       display: block;
       padding: 6px 16px;
       color: #a0a0a0;
@@ -67,11 +67,11 @@ func tocCSS() string {
       transition: background 0.15s, color 0.15s;
       border-left: 2px solid transparent;
     }
-    #toc-panel a:hover {
+    #userinput-panel a:hover {
       background: rgba(255, 255, 255, 0.05);
       color: #e0e0e0;
     }
-    #toc-panel a.active {
+    #userinput-panel a.active {
       color: #ffffff;
       border-left-color: #569cd6;
       background: rgba(86, 156, 214, 0.1);
@@ -87,13 +87,13 @@ func tocHTML(entries []TOCEntry) string {
 	}
 
 	result := `
-  <button id="toc-toggle" title="Table of Contents">TOC</button>
-  <div id="toc-panel">
+  <button id="userinput-toggle" title="User Inputs">User Inputs</button>
+  <div id="userinput-panel">
     <ul>
 `
 	for i, e := range entries {
 		escapedLabel := htmlpkg.EscapeString(e.Label)
-		result += `      <li><a href="#" data-toc-index="` + itoa(i) + `" data-toc-line="` + itoa(e.Line) + `" title="` + escapedLabel + `">` + escapedLabel + `</a></li>
+		result += `      <li><a href="javascript:void(0)" data-toc-index="` + itoa(i) + `" data-toc-line="` + itoa(e.Line) + `" title="` + escapedLabel + `">` + escapedLabel + `</a></li>
 `
 	}
 	result += `    </ul>
@@ -113,14 +113,97 @@ func tocJS(entries []TOCEntry) string {
 	entriesJSON, _ := json.Marshal(entries)
 
 	return `
-    // TOC panel logic
+    // User input navigation logic
     (function() {
       var tocEntries = ` + string(entriesJSON) + `;
-      var tocToggle = document.getElementById('toc-toggle');
-      var tocPanel = document.getElementById('toc-panel');
+      var tocToggle = document.getElementById('userinput-toggle');
+      var tocPanel = document.getElementById('userinput-panel');
       var tocLinks = tocPanel.querySelectorAll('a[data-toc-line]');
 
-      tocToggle.addEventListener('click', function() {
+      // Resolve actual rendered row for each entry by searching the xterm buffer.
+      // Raw line numbers from Go cannot account for cursor-movement escape sequences
+      // that xterm.js processes (overwriting rows), so we search the buffer directly.
+      var resolvedRows = null;
+      // Search buffer for a needle starting from a given row
+      function findInBuffer(buffer, needle, from) {
+        for (var row = from; row < buffer.length; row++) {
+          var line = buffer.getLine(row);
+          if (line) {
+            var text = line.translateToString(true);
+            if (text.indexOf(needle) !== -1) return row;
+          }
+        }
+        return -1;
+      }
+
+      function resolveRows() {
+        var rows = [];
+        var buffer = xterm.buffer.active;
+        if (!buffer || buffer.length === 0) return;
+        var searchFrom = 0;
+        for (var i = 0; i < tocEntries.length; i++) {
+          var label = tocEntries[i].label;
+          if (!label || label.length < 2) {
+            rows.push(searchFrom);
+            continue;
+          }
+          // Try progressively shorter prefix needles: 30, 20, 10, 5 chars
+          var found = -1;
+          var lengths = [30, 20, 10, 5];
+          for (var li = 0; li < lengths.length && found < 0; li++) {
+            var len = Math.min(lengths[li], label.length);
+            if (len < 2) continue;
+            found = findInBuffer(buffer, label.substring(0, len), searchFrom);
+          }
+          // Fallback: try substrings starting from various offsets
+          // This handles tab-completion where prefix was replaced by shell
+          if (found < 0) {
+            var offsets = [];
+            for (var si = 1; si < label.length; si++) {
+              var ch = label[si];
+              if (ch === ' ' || ch === "'" || ch === '"' || ch === '/' || ch === '-') {
+                offsets.push(si);
+                offsets.push(si + 1);
+              }
+            }
+            for (var oi = 0; oi < offsets.length && found < 0; oi++) {
+              var off = offsets[oi];
+              if (off >= label.length) continue;
+              var sub = label.substring(off);
+              if (sub.length >= 5) {
+                var needle = sub.substring(0, Math.min(20, sub.length));
+                found = findInBuffer(buffer, needle, searchFrom);
+              }
+            }
+          }
+          if (found >= 0) {
+            rows.push(found);
+            searchFrom = found + 1;
+          } else {
+            rows.push(searchFrom);
+          }
+        }
+        resolvedRows = rows;
+      }
+      // Defer resolution until after xterm rendering and resize complete
+      setTimeout(resolveRows, 200);
+
+      // Compute cell height once from the xterm DOM
+      function getCellHeight() {
+        var terminalDiv = document.getElementById('terminal');
+        var xtermScreen = terminalDiv.querySelector('.xterm-screen');
+        if (xtermScreen && xterm.buffer.active) {
+          // total pixel height / total rows = actual cell height
+          var totalRows = xterm.rows;
+          if (totalRows > 0) {
+            return xtermScreen.getBoundingClientRect().height / totalRows;
+          }
+        }
+        return 17; // fallback
+      }
+
+      tocToggle.addEventListener('click', function(e) {
+        e.stopPropagation();
         tocPanel.classList.toggle('open');
       });
 
@@ -136,33 +219,42 @@ func tocJS(entries []TOCEntry) string {
         var link = e.target.closest('a[data-toc-line]');
         if (!link) return;
         e.preventDefault();
+        e.stopPropagation();
 
-        var line = parseInt(link.getAttribute('data-toc-line'), 10);
-        scrollToLine(line);
-        tocPanel.classList.remove('open');
+        // Ensure rows are resolved
+        if (!resolvedRows) resolveRows();
+        if (!resolvedRows) return;
+
+        var idx = parseInt(link.getAttribute('data-toc-index'), 10);
+        if (idx >= 0 && idx < resolvedRows.length) {
+          tocPanel.classList.remove('open');
+          // Use requestAnimationFrame to scroll after panel closes
+          requestAnimationFrame(function() {
+            scrollToRow(resolvedRows[idx]);
+          });
+        }
       });
 
-      function scrollToLine(line) {
+      function scrollToRow(row) {
         var terminalDiv = document.getElementById('terminal');
-        var termTop = terminalDiv.getBoundingClientRect().top + window.scrollY;
-        // Get xterm.js cell dimensions from the actual rendered element
-        var cellHeight = terminalDiv.querySelector('.xterm-rows') ?
-          terminalDiv.querySelector('.xterm-rows').children[0].getBoundingClientRect().height : 17;
-        var targetY = termTop + (line * cellHeight);
-        window.scrollTo({ top: Math.max(0, targetY - 20), behavior: 'smooth' });
+        var termRect = terminalDiv.getBoundingClientRect();
+        var termTop = termRect.top + window.pageYOffset;
+        var cellHeight = getCellHeight();
+        var targetY = termTop + (row * cellHeight);
+        window.scrollTo(0, Math.max(0, targetY - 20));
       }
 
       // Highlight current section based on scroll position
       function updateActiveLink() {
+        if (!resolvedRows) return;
         var terminalDiv = document.getElementById('terminal');
-        var termTop = terminalDiv.getBoundingClientRect().top + window.scrollY;
-        var cellHeight = terminalDiv.querySelector('.xterm-rows') ?
-          terminalDiv.querySelector('.xterm-rows').children[0].getBoundingClientRect().height : 17;
-        var scrollTop = window.scrollY + 40;
+        var termTop = terminalDiv.getBoundingClientRect().top + window.pageYOffset;
+        var cellHeight = getCellHeight();
+        var scrollTop = window.pageYOffset + 40;
 
         var activeIndex = 0;
-        for (var i = tocEntries.length - 1; i >= 0; i--) {
-          var entryY = termTop + (tocEntries[i].line * cellHeight);
+        for (var i = resolvedRows.length - 1; i >= 0; i--) {
+          var entryY = termTop + (resolvedRows[i] * cellHeight);
           if (scrollTop >= entryY) {
             activeIndex = i;
             break;
@@ -176,7 +268,7 @@ func tocJS(entries []TOCEntry) string {
 
       window.addEventListener('scroll', updateActiveLink, { passive: true });
       // Initial highlight
-      setTimeout(updateActiveLink, 200);
+      setTimeout(updateActiveLink, 300);
     })();
 `
 }

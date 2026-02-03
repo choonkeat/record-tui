@@ -116,8 +116,23 @@ func BuildTOC(timingReader io.Reader, inputContent []byte, sessionContent []byte
 		return nil
 	}
 
-	rawOutput := []byte(session.StripMetadataOnly(string(sessionContent)))
-	tocRaw := toc.FromCommands(commands, rawOutput)
+	// Get raw output (metadata stripped, but escape sequences preserved)
+	rawOutput := session.StripMetadataOnly(string(sessionContent))
+
+	// Apply neutralization (alt-screen + clear) with offset tracking.
+	// The HTML template applies these same transformations before feeding
+	// content to xterm.js, so line numbers must be computed from the
+	// processed content to match the rendered output.
+	processedOutput, mapOffset := session.NeutralizeAllWithOffsets(rawOutput)
+
+	// Map each command's raw byte offset to the processed content offset
+	mappedCommands := make([]timing.Command, len(commands))
+	copy(mappedCommands, commands)
+	for i := range mappedCommands {
+		mappedCommands[i].OutputByteOffset = mapOffset(mappedCommands[i].OutputByteOffset)
+	}
+
+	tocRaw := toc.FromCommands(mappedCommands, []byte(processedOutput))
 
 	result := make([]TOCEntry, len(tocRaw))
 	for i, e := range tocRaw {

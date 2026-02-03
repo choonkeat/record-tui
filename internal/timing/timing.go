@@ -233,32 +233,174 @@ func finalizeCommand(input []byte, outputOffset int) *Command {
 }
 
 // stripEscapeSequences removes ANSI escape sequences from a string,
-// keeping only printable text.
+// keeping only printable text. Simulates a simple line editor to handle
+// cursor movement (arrow keys), backspace (0x7F/DEL), readline word
+// movement (ESC b/f), and readline editing commands (Ctrl+K/W/U/A/E).
 func stripEscapeSequences(s string) string {
-	var result []byte
+	var buf []byte
+	cursor := 0
 	i := 0
 	for i < len(s) {
 		if s[i] == 0x1b {
-			// Skip ESC and the sequence that follows
+			// Parse ESC sequence
 			i++
-			if i < len(s) && s[i] == '[' {
+			if i >= len(s) {
+				break
+			}
+			if s[i] == '[' {
+				// CSI sequence: ESC [ params final
 				i++
-				for i < len(s) && s[i] >= 0x20 && s[i] <= 0x3f {
+				paramStart := i
+				for i < len(s) && s[i] >= 0x30 && s[i] <= 0x3f {
+					i++
+				}
+				param := s[paramStart:i]
+				// Skip intermediate bytes (0x20-0x2f)
+				for i < len(s) && s[i] >= 0x20 && s[i] <= 0x2f {
 					i++
 				}
 				if i < len(s) {
+					final := s[i]
 					i++
+					switch final {
+					case 'D': // Cursor left
+						n := 1
+						if param != "" {
+							n, _ = strconv.Atoi(param)
+							if n == 0 {
+								n = 1
+							}
+						}
+						cursor -= n
+						if cursor < 0 {
+							cursor = 0
+						}
+					case 'C': // Cursor right
+						n := 1
+						if param != "" {
+							n, _ = strconv.Atoi(param)
+							if n == 0 {
+								n = 1
+							}
+						}
+						cursor += n
+						if cursor > len(buf) {
+							cursor = len(buf)
+						}
+					case 'H', 'f': // Cursor home / position
+						cursor = 0
+					case '~': // Special keys
+						switch param {
+						case "3": // Delete key
+							if cursor < len(buf) {
+								buf = append(buf[:cursor], buf[cursor+1:]...)
+							}
+						}
+						// 200~ and 201~ are bracketed paste markers - just ignore
+					}
+				}
+			} else if s[i] == 'b' {
+				// ESC b = word backward
+				i++
+				for cursor > 0 && (cursor-1 >= len(buf) || buf[cursor-1] == ' ') {
+					cursor--
+				}
+				for cursor > 0 && cursor-1 < len(buf) && buf[cursor-1] != ' ' {
+					cursor--
+				}
+			} else if s[i] == 'f' {
+				// ESC f = word forward
+				i++
+				for cursor < len(buf) && buf[cursor] != ' ' {
+					cursor++
+				}
+				for cursor < len(buf) && buf[cursor] == ' ' {
+					cursor++
+				}
+			} else if s[i] == 'd' {
+				// ESC d = kill word forward
+				i++
+				end := cursor
+				for end < len(buf) && buf[end] == ' ' {
+					end++
+				}
+				for end < len(buf) && buf[end] != ' ' {
+					end++
+				}
+				buf = append(buf[:cursor], buf[end:]...)
+			} else if s[i] == 0x7f {
+				// ESC DEL = kill word backward
+				i++
+				start := cursor
+				for start > 0 && buf[start-1] == ' ' {
+					start--
+				}
+				for start > 0 && buf[start-1] != ' ' {
+					start--
+				}
+				buf = append(buf[:start], buf[cursor:]...)
+				cursor = start
+			} else if s[i] == 0x1b {
+				// Double ESC - don't consume the second ESC, let the loop handle it
+			} else {
+				// Other ESC + single char (e.g., ESC O for SS3) - skip
+				i++
+			}
+		} else if s[i] == 0x7f || s[i] == 0x08 {
+			// DEL or BS: delete previous character
+			if cursor > 0 {
+				cursor--
+				if cursor < len(buf) {
+					buf = append(buf[:cursor], buf[cursor+1:]...)
 				}
 			}
+			i++
+		} else if s[i] == 0x01 {
+			// Ctrl+A: beginning of line
+			cursor = 0
+			i++
+		} else if s[i] == 0x05 {
+			// Ctrl+E: end of line
+			cursor = len(buf)
+			i++
+		} else if s[i] == 0x0b {
+			// Ctrl+K: kill to end of line
+			if cursor < len(buf) {
+				buf = buf[:cursor]
+			}
+			i++
+		} else if s[i] == 0x15 {
+			// Ctrl+U: kill to beginning of line
+			buf = buf[cursor:]
+			cursor = 0
+			i++
+		} else if s[i] == 0x17 {
+			// Ctrl+W: kill previous word
+			start := cursor
+			for start > 0 && start-1 < len(buf) && buf[start-1] == ' ' {
+				start--
+			}
+			for start > 0 && start-1 < len(buf) && buf[start-1] != ' ' {
+				start--
+			}
+			buf = append(buf[:start], buf[cursor:]...)
+			cursor = start
+			i++
 		} else if s[i] < 0x20 {
-			// Skip control characters
+			// Skip other control characters
 			i++
 		} else {
-			result = append(result, s[i])
+			// Printable character: overwrite at cursor position
+			if cursor < len(buf) {
+				buf[cursor] = s[i]
+			} else {
+				buf = append(buf, s[i])
+			}
+			cursor++
 			i++
 		}
 	}
-	return string(result)
+	return string(buf)
 }
 
 // isOnlyEscapeSequences returns true if the string contains only ANSI escape sequences

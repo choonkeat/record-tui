@@ -266,10 +266,10 @@ func TestConvertSessionToHTML_WithTimingAndInput(t *testing.T) {
 	}
 	htmlString := string(htmlBytes)
 
-	if !strings.Contains(htmlString, `id="toc-toggle"`) {
+	if !strings.Contains(htmlString, `id="userinput-toggle"`) {
 		t.Error("HTML should contain TOC toggle button")
 	}
-	if !strings.Contains(htmlString, `id="toc-panel"`) {
+	if !strings.Contains(htmlString, `id="userinput-panel"`) {
 		t.Error("HTML should contain TOC panel")
 	}
 	if !strings.Contains(htmlString, ">ls</a>") {
@@ -300,7 +300,7 @@ func TestConvertSessionToHTML_WithoutTimingFiles(t *testing.T) {
 	htmlString := string(htmlBytes)
 
 	// Should NOT have TOC when no timing files
-	if strings.Contains(htmlString, `id="toc-toggle"`) {
+	if strings.Contains(htmlString, `id="userinput-toggle"`) {
 		t.Error("HTML should NOT contain TOC when no timing files")
 	}
 }

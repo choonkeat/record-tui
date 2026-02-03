@@ -289,11 +289,11 @@ func TestRenderPlaybackHTML_WithTOC(t *testing.T) {
 	}
 
 	// Should contain TOC toggle button
-	if !strings.Contains(html, `id="toc-toggle"`) {
+	if !strings.Contains(html, `id="userinput-toggle"`) {
 		t.Error("HTML should contain TOC toggle button")
 	}
 	// Should contain TOC panel
-	if !strings.Contains(html, `id="toc-panel"`) {
+	if !strings.Contains(html, `id="userinput-panel"`) {
 		t.Error("HTML should contain TOC panel")
 	}
 	// Should contain command labels
@@ -318,10 +318,10 @@ func TestRenderPlaybackHTML_WithoutTOC(t *testing.T) {
 	}
 
 	// Should NOT contain TOC elements when no entries provided
-	if strings.Contains(html, `id="toc-toggle"`) {
+	if strings.Contains(html, `id="userinput-toggle"`) {
 		t.Error("HTML should not contain TOC toggle when no entries")
 	}
-	if strings.Contains(html, `id="toc-panel"`) {
+	if strings.Contains(html, `id="userinput-panel"`) {
 		t.Error("HTML should not contain TOC panel when no entries")
 	}
 }
