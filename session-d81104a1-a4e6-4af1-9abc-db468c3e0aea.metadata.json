@@ -1,0 +1,25 @@
+{
+  "uuid": "d81104a1-a4e6-4af1-9abc-db468c3e0aea",
+  "name": "choonkeat/swe-swe@main",
+  "agent": "Claude",
+  "started_at": "2026-02-03T12:55:07.340725627Z",
+  "ended_at": "2026-02-03T13:13:29.268427443Z",
+  "command": [
+    "script",
+    "-q",
+    "-f",
+    "-T",
+    "/workspace/.swe-swe/recordings/session-d81104a1-a4e6-4af1-9abc-db468c3e0aea.timing",
+    "-I",
+    "/workspace/.swe-swe/recordings/session-d81104a1-a4e6-4af1-9abc-db468c3e0aea.input",
+    "-O",
+    "/workspace/.swe-swe/recordings/session-d81104a1-a4e6-4af1-9abc-db468c3e0aea.log",
+    "-c",
+    "claude"
+  ],
+  "max_cols": 226,
+  "max_rows": 54,
+  "playback_cols": 240,
+  "playback_rows": 10000,
+  "work_dir": "/workspace"
+}

@@ -1,0 +1,52 @@
+{
+  "uuid": "ec390ffd-10fe-4d7c-b414-6e7849e23238",
+  "name": "agent-reverse-proxy@main",
+  "agent": "Claude",
+  "started_at": "2026-02-16T03:31:23.189173684Z",
+  "ended_at": "2026-02-16T05:53:33.228537364Z",
+  "kept_at": "2026-02-16T05:53:56.14328649Z",
+  "command": [
+    "script",
+    "-q",
+    "-f",
+    "-T",
+    "/workspace/.swe-swe/recordings/session-ec390ffd-10fe-4d7c-b414-6e7849e23238.timing",
+    "-I",
+    "/workspace/.swe-swe/recordings/session-ec390ffd-10fe-4d7c-b414-6e7849e23238.input",
+    "-O",
+    "/workspace/.swe-swe/recordings/session-ec390ffd-10fe-4d7c-b414-6e7849e23238.log",
+    "-c",
+    "claude"
+  ],
+  "visitors": [
+    {
+      "joined_at": "2026-02-16T04:22:18.510459932Z",
+      "ip": "172.18.0.7:59358"
+    },
+    {
+      "joined_at": "2026-02-16T04:22:29.546690233Z",
+      "ip": "172.18.0.7:43094"
+    },
+    {
+      "joined_at": "2026-02-16T04:38:06.208332034Z",
+      "ip": "172.18.0.7:58264"
+    },
+    {
+      "joined_at": "2026-02-16T04:54:33.719221678Z",
+      "ip": "172.18.0.7:47518"
+    },
+    {
+      "joined_at": "2026-02-16T05:11:27.633318145Z",
+      "ip": "172.18.0.7:56674"
+    },
+    {
+      "joined_at": "2026-02-16T05:24:08.072643201Z",
+      "ip": "172.18.0.7:35196"
+    }
+  ],
+  "max_cols": 226,
+  "max_rows": 54,
+  "playback_cols": 240,
+  "playback_rows": 10000,
+  "work_dir": "/repos/agent-reverse-proxy/workspace"
+}

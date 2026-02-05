@@ -1,0 +1,56 @@
+{
+  "uuid": "195a3195-8b93-4284-aec3-64163f6c25d4",
+  "name": "Reading@main",
+  "agent": "Claude",
+  "started_at": "2026-02-16T03:15:27.812167094Z",
+  "ended_at": "2026-02-16T05:53:42.238218743Z",
+  "kept_at": "2026-02-16T05:53:53.597725108Z",
+  "command": [
+    "script",
+    "-q",
+    "-f",
+    "-T",
+    "/workspace/.swe-swe/recordings/session-195a3195-8b93-4284-aec3-64163f6c25d4.timing",
+    "-I",
+    "/workspace/.swe-swe/recordings/session-195a3195-8b93-4284-aec3-64163f6c25d4.input",
+    "-O",
+    "/workspace/.swe-swe/recordings/session-195a3195-8b93-4284-aec3-64163f6c25d4.log",
+    "-c",
+    "claude"
+  ],
+  "visitors": [
+    {
+      "joined_at": "2026-02-16T04:22:18.607699597Z",
+      "ip": "172.18.0.7:59360"
+    },
+    {
+      "joined_at": "2026-02-16T04:22:29.426883354Z",
+      "ip": "172.18.0.7:43082"
+    },
+    {
+      "joined_at": "2026-02-16T04:38:06.130510348Z",
+      "ip": "172.18.0.7:58256"
+    },
+    {
+      "joined_at": "2026-02-16T04:38:21.897476235Z",
+      "ip": "172.18.0.7:39308"
+    },
+    {
+      "joined_at": "2026-02-16T04:54:33.863525296Z",
+      "ip": "172.18.0.7:47550"
+    },
+    {
+      "joined_at": "2026-02-16T05:11:27.852539096Z",
+      "ip": "172.18.0.7:56706"
+    },
+    {
+      "joined_at": "2026-02-16T05:24:07.908948715Z",
+      "ip": "172.18.0.7:35192"
+    }
+  ],
+  "max_cols": 226,
+  "max_rows": 54,
+  "playback_cols": 240,
+  "playback_rows": 10000,
+  "work_dir": "/repos/Reading/workspace"
+}

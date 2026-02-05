@@ -141,6 +141,32 @@ func BuildTOC(timingReader io.Reader, inputContent []byte, sessionContent []byte
 	return result
 }
 
+// BuildTOCFromReader is a streaming variant of BuildTOC that accepts an
+// io.Reader for session content instead of loading it all into memory.
+// Line numbers are approximate (no alt-screen/clear neutralization) but
+// accurate enough for TOC navigation. Uses constant memory regardless
+// of session log size.
+func BuildTOCFromReader(timingReader io.Reader, inputContent []byte, sessionReader io.Reader) []TOCEntry {
+	entries, err := timing.Parse(timingReader)
+	if err != nil {
+		return nil
+	}
+
+	strippedInput := []byte(session.StripMetadataOnly(string(inputContent)))
+	commands := timing.ExtractCommands(entries, strippedInput)
+	if len(commands) == 0 {
+		return nil
+	}
+
+	tocRaw := toc.FromCommandsReader(commands, sessionReader)
+
+	result := make([]TOCEntry, len(tocRaw))
+	for i, e := range tocRaw {
+		result[i] = TOCEntry{Label: e.Label, Line: e.Line}
+	}
+	return result
+}
+
 func RenderStreamingHTML(opts StreamingOptions) (string, error) {
 	var tocEntries []html.TOCEntry
 	for _, e := range opts.TOC {
