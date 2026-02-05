@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/choonkeat/record-tui/internal/logfile"
 	"github.com/choonkeat/record-tui/internal/session"
 	"github.com/choonkeat/record-tui/playback"
 )
@@ -13,7 +14,7 @@ import (
 func main() {
 	logPath := os.Args[1]
 
-	sessionContent, err := os.ReadFile(logPath)
+	sessionContent, err := logfile.ReadFile(logPath)
 	if err != nil {
 		panic(err)
 	}
@@ -28,8 +29,8 @@ func main() {
 	fmt.Printf("Processed == Neutralized: %v\n", processedOutput == neutralized)
 	fmt.Printf("len(processed)=%d len(neutralized)=%d\n", len(processedOutput), len(neutralized))
 
-	timingPath := strings.TrimSuffix(logPath, ".log") + ".timing"
-	inputPath := strings.TrimSuffix(logPath, ".log") + ".input"
+	timingPath := logfile.CompanionPath(logPath, ".timing")
+	inputPath := logfile.CompanionPath(logPath, ".input")
 
 	timingFile, err := os.Open(timingPath)
 	if err != nil {

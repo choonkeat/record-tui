@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
+	"github.com/choonkeat/record-tui/internal/logfile"
 	"github.com/choonkeat/record-tui/playback"
 )
 
@@ -29,8 +29,8 @@ func ConvertSessionToHTML(sessionLogPath string) (string, error) {
 		return "", fmt.Errorf("session.log not found: %s", sessionLogPath)
 	}
 
-	// Read session.log file
-	sessionContent, err := os.ReadFile(sessionLogPath)
+	// Read session.log file (transparently handles .log.gz)
+	sessionContent, err := logfile.ReadFile(sessionLogPath)
 	if err != nil {
 		return "", fmt.Errorf("cannot read session.log: %w", err)
 	}
@@ -89,8 +89,8 @@ func ConvertSessionToHTMLWithPath(sessionLogPath string, outputPath string) (str
 		return "", fmt.Errorf("invalid output path: %w", err)
 	}
 
-	// Read session.log
-	sessionContent, err := os.ReadFile(sessionPath)
+	// Read session.log (transparently handles .log.gz)
+	sessionContent, err := logfile.ReadFile(sessionPath)
 	if err != nil {
 		return "", fmt.Errorf("cannot read session.log: %w", err)
 	}
@@ -142,7 +142,7 @@ func ConvertSessionToStreamingHTML(sessionLogPath string, maxRows uint32) (strin
 
 	// Try to generate TOC from timing/input files
 	var tocEntries []playback.TOCEntry
-	sessionContent, err := os.ReadFile(sessionLogPath)
+	sessionContent, err := logfile.ReadFile(sessionLogPath)
 	if err == nil {
 		tocEntries = buildTOC(sessionLogPath, sessionContent)
 	}
@@ -178,8 +178,8 @@ func ConvertSessionToStreamingHTML(sessionLogPath string, maxRows uint32) (strin
 //   - session.log      → session.timing, session.input
 //   - session-UUID.log → session-UUID.timing, session-UUID.input
 func buildTOC(sessionLogPath string, sessionContent []byte) []playback.TOCEntry {
-	timingPath := deriveCompanionPath(sessionLogPath, ".timing")
-	inputPath := deriveCompanionPath(sessionLogPath, ".input")
+	timingPath := logfile.CompanionPath(sessionLogPath, ".timing")
+	inputPath := logfile.CompanionPath(sessionLogPath, ".input")
 
 	timingFile, err := os.Open(timingPath)
 	if err != nil {
@@ -193,14 +193,4 @@ func buildTOC(sessionLogPath string, sessionContent []byte) []playback.TOCEntry 
 	}
 
 	return playback.BuildTOC(timingFile, inputBytes, bytes.NewReader(sessionContent))
-}
-
-// deriveCompanionPath replaces the .log extension with the given extension.
-// e.g., "/path/session.log" + ".timing" → "/path/session.timing"
-// e.g., "/path/session-abc.log" + ".input" → "/path/session-abc.input"
-func deriveCompanionPath(logPath string, ext string) string {
-	if strings.HasSuffix(logPath, ".log") {
-		return logPath[:len(logPath)-4] + ext
-	}
-	return logPath + ext
 }

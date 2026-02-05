@@ -4,6 +4,7 @@ import (
 	"io"
 
 	"github.com/choonkeat/record-tui/internal/html"
+	"github.com/choonkeat/record-tui/internal/logfile"
 	"github.com/choonkeat/record-tui/internal/session"
 	"github.com/choonkeat/record-tui/internal/timing"
 	"github.com/choonkeat/record-tui/internal/toc"
@@ -149,4 +150,37 @@ func RenderStreamingHTML(opts StreamingOptions) (string, error) {
 		TOC:     tocEntries,
 	}
 	return html.RenderStreamingPlaybackHTML(internalOpts)
+}
+
+// OpenLogFile opens a session log file for reading, transparently decompressing
+// gzip-compressed files. It detects gzip format by checking for magic bytes
+// (0x1f 0x8b) at the start of the file, so it works regardless of file extension.
+// The returned ReadCloser must be closed by the caller.
+//
+// Example:
+//
+//	rc, err := playback.OpenLogFile("session.log.gz")
+//	if err != nil { ... }
+//	defer rc.Close()
+//	content, _ := io.ReadAll(rc)
+func OpenLogFile(path string) (io.ReadCloser, error) {
+	return logfile.Open(path)
+}
+
+// ReadLogFile reads the entire contents of a session log file, transparently
+// decompressing gzip-compressed files. It is a drop-in replacement for
+// os.ReadFile that also handles compressed log files.
+func ReadLogFile(path string) ([]byte, error) {
+	return logfile.ReadFile(path)
+}
+
+// LogCompanionPath derives a companion file path (e.g. .timing, .input) from a
+// log file path. It handles both plain .log and compressed .log.gz extensions.
+//
+// Examples:
+//
+//	LogCompanionPath("session.log", ".timing")    → "session.timing"
+//	LogCompanionPath("session.log.gz", ".timing") → "session.timing"
+func LogCompanionPath(logPath string, ext string) string {
+	return logfile.CompanionPath(logPath, ext)
 }

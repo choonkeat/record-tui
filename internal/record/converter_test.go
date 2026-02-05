@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/choonkeat/record-tui/internal/logfile"
 )
 
 // TestConvertSessionToHTML_WithSimpleSession tests conversion of a simple recorded session
@@ -305,8 +307,8 @@ func TestConvertSessionToHTML_WithoutTimingFiles(t *testing.T) {
 	}
 }
 
-// TestDeriveCompanionPath tests the path derivation helper
-func TestDeriveCompanionPath(t *testing.T) {
+// TestCompanionPath tests the path derivation helper (moved to internal/logfile)
+func TestCompanionPath(t *testing.T) {
 	tests := []struct {
 		logPath  string
 		ext      string
@@ -316,12 +318,14 @@ func TestDeriveCompanionPath(t *testing.T) {
 		{"/path/session.log", ".input", "/path/session.input"},
 		{"/path/session-abc123.log", ".timing", "/path/session-abc123.timing"},
 		{"/path/noext", ".timing", "/path/noext.timing"},
+		{"/path/session.log.gz", ".timing", "/path/session.timing"},
+		{"/path/session.log.gz", ".input", "/path/session.input"},
 	}
 
 	for _, tt := range tests {
-		got := deriveCompanionPath(tt.logPath, tt.ext)
+		got := logfile.CompanionPath(tt.logPath, tt.ext)
 		if got != tt.expected {
-			t.Errorf("deriveCompanionPath(%q, %q) = %q, want %q", tt.logPath, tt.ext, got, tt.expected)
+			t.Errorf("CompanionPath(%q, %q) = %q, want %q", tt.logPath, tt.ext, got, tt.expected)
 		}
 	}
 }
