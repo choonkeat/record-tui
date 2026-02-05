@@ -129,6 +129,7 @@ func RenderStreamingPlaybackHTML(opts StreamingOptions) (string, error) {
     const TERM_ROWS = ` + fmt.Sprintf("%d", rows) + `;
     const TERM_SCROLLBACK = ` + fmt.Sprintf("%d", scrollback) + `;
     const AUTO_RESIZE = ` + fmt.Sprintf("%t", autoResizeEnabled) + `;
+    var xterm; // declared at top level so tocJS can access it
 
     // ============================================================
     // Streaming cleaner - embedded from internal/js/cleaner-core.js
@@ -174,7 +175,7 @@ func RenderStreamingPlaybackHTML(opts StreamingOptions) (string, error) {
       // Initialize xterm with dimensions from server metadata (or defaults for auto-detect)
       // Read-only terminal: no keyboard/mouse input, but selection allowed for copy
       const terminalDiv = document.getElementById('terminal');
-      const xterm = new Terminal({
+      xterm = new Terminal({
         cols: TERM_COLS,
         rows: TERM_ROWS,
         scrollback: TERM_SCROLLBACK,
