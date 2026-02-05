@@ -1,6 +1,7 @@
 package record
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -191,7 +192,7 @@ func buildTOC(sessionLogPath string, sessionContent []byte) []playback.TOCEntry 
 		return nil
 	}
 
-	return playback.BuildTOC(timingFile, inputBytes, sessionContent)
+	return playback.BuildTOC(timingFile, inputBytes, bytes.NewReader(sessionContent))
 }
 
 // deriveCompanionPath replaces the .log extension with the given extension.

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"strings"
@@ -43,7 +44,7 @@ func main() {
 		return
 	}
 
-	entries := playback.BuildTOC(timingFile, inputBytes, sessionContent)
+	entries := playback.BuildTOC(timingFile, inputBytes, bytes.NewReader(sessionContent))
 	fmt.Printf("\nTOC entries (%d):\n", len(entries))
 	for i, e := range entries {
 		label := e.Label

@@ -97,14 +97,17 @@ func RenderHTML(frames []Frame, opts ...Options) (string, error) {
 //
 // Both inputContent and sessionContent have their script header/footer stripped
 // automatically before processing.
+// BuildTOC generates a table of contents by streaming session content.
+// Accepts io.Reader for session content to avoid loading entire recordings
+// into memory. Uses constant memory regardless of recording size.
 //
 // Example:
 //
 //	timingFile, _ := os.Open("session.timing")
 //	inputBytes, _ := os.ReadFile("session.input")
-//	sessionBytes, _ := os.ReadFile("session.log")
-//	tocEntries := playback.BuildTOC(timingFile, inputBytes, sessionBytes)
-func BuildTOC(timingReader io.Reader, inputContent []byte, sessionContent []byte) []TOCEntry {
+//	sessionFile, _ := os.Open("session.log")
+//	tocEntries := playback.BuildTOC(timingFile, inputBytes, sessionFile)
+func BuildTOC(timingReader io.Reader, inputContent []byte, sessionReader io.Reader) []TOCEntry {
 	entries, err := timing.Parse(timingReader)
 	if err != nil {
 		return nil
@@ -116,49 +119,7 @@ func BuildTOC(timingReader io.Reader, inputContent []byte, sessionContent []byte
 		return nil
 	}
 
-	// Get raw output (metadata stripped, but escape sequences preserved)
-	rawOutput := session.StripMetadataOnly(string(sessionContent))
-
-	// Apply neutralization (alt-screen + clear) with offset tracking.
-	// The HTML template applies these same transformations before feeding
-	// content to xterm.js, so line numbers must be computed from the
-	// processed content to match the rendered output.
-	processedOutput, mapOffset := session.NeutralizeAllWithOffsets(rawOutput)
-
-	// Map each command's raw byte offset to the processed content offset
-	mappedCommands := make([]timing.Command, len(commands))
-	copy(mappedCommands, commands)
-	for i := range mappedCommands {
-		mappedCommands[i].OutputByteOffset = mapOffset(mappedCommands[i].OutputByteOffset)
-	}
-
-	tocRaw := toc.FromCommands(mappedCommands, []byte(processedOutput))
-
-	result := make([]TOCEntry, len(tocRaw))
-	for i, e := range tocRaw {
-		result[i] = TOCEntry{Label: e.Label, Line: e.Line}
-	}
-	return result
-}
-
-// BuildTOCFromReader is a streaming variant of BuildTOC that accepts an
-// io.Reader for session content instead of loading it all into memory.
-// Line numbers are approximate (no alt-screen/clear neutralization) but
-// accurate enough for TOC navigation. Uses constant memory regardless
-// of session log size.
-func BuildTOCFromReader(timingReader io.Reader, inputContent []byte, sessionReader io.Reader) []TOCEntry {
-	entries, err := timing.Parse(timingReader)
-	if err != nil {
-		return nil
-	}
-
-	strippedInput := []byte(session.StripMetadataOnly(string(inputContent)))
-	commands := timing.ExtractCommands(entries, strippedInput)
-	if len(commands) == 0 {
-		return nil
-	}
-
-	tocRaw := toc.FromCommandsReader(commands, sessionReader)
+	tocRaw := toc.FromCommands(commands, sessionReader)
 
 	result := make([]TOCEntry, len(tocRaw))
 	for i, e := range tocRaw {
