@@ -2,13 +2,12 @@ package html
 
 import (
 	"encoding/json"
-	htmlpkg "html"
 )
 
-// tocCSS returns the CSS for the floating TOC panel.
+// tocCSS returns the CSS for the floating navigation indicator.
 func tocCSS() string {
 	return `
-    #userinput-toggle {
+    #nav-indicator {
       position: fixed;
       top: 12px;
       right: 12px;
@@ -16,93 +15,114 @@ func tocCSS() string {
       background: rgba(30, 30, 30, 0.9);
       border: 1px solid rgba(212, 212, 212, 0.2);
       color: #d4d4d4;
-      padding: 6px 12px;
+      padding: 6px 14px;
       font-size: 13px;
       font-family: inherit;
-      cursor: pointer;
       border-radius: 4px;
-      transition: background 0.2s, border-color 0.2s;
-    }
-    #userinput-toggle:hover {
-      background: rgba(50, 50, 50, 0.95);
-      border-color: rgba(212, 212, 212, 0.4);
-    }
-
-    #userinput-panel {
-      position: fixed;
-      top: 44px;
-      right: 12px;
-      z-index: 999;
-      background: rgba(30, 30, 30, 0.95);
-      border: 1px solid rgba(212, 212, 212, 0.2);
-      border-radius: 6px;
-      max-height: calc(100vh - 60px);
-      max-width: 320px;
-      min-width: 180px;
-      overflow-y: auto;
+      user-select: none;
       display: none;
       backdrop-filter: blur(8px);
     }
-    #userinput-panel.open {
-      display: block;
+    #nav-indicator span {
+      vertical-align: middle;
     }
-
-    #userinput-panel ul {
-      list-style: none;
-      margin: 0;
-      padding: 8px 0;
+    .nav-btn {
+      cursor: pointer;
+      padding: 2px 6px;
+      color: #888;
+      transition: color 0.15s;
+      font-size: 16px;
     }
-    #userinput-panel li {
-      margin: 0;
+    .nav-btn:hover {
+      color: #fff;
     }
-    #userinput-panel a {
-      display: block;
-      padding: 6px 16px;
-      color: #a0a0a0;
-      text-decoration: none;
+    .nav-pos {
+      color: #666;
       font-size: 12px;
+      margin: 0 4px;
+    }
+    .nav-label {
+      color: #a0a0a0;
+      font-size: 12px;
+      max-width: 200px;
+      display: inline-block;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      transition: background 0.15s, color 0.15s;
-      border-left: 2px solid transparent;
+      margin: 0 4px;
     }
-    #userinput-panel a:hover {
-      background: rgba(255, 255, 255, 0.05);
-      color: #e0e0e0;
+    #nav-indicator.expanded {
+      padding: 6px 0;
+      max-height: 60vh;
+      overflow-y: auto;
     }
-    #userinput-panel a.active {
-      color: #ffffff;
-      border-left-color: #569cd6;
-      background: rgba(86, 156, 214, 0.1);
+    #nav-indicator.expanded .nav-btn,
+    #nav-indicator.expanded .nav-pos,
+    #nav-indicator.expanded .nav-label {
+      display: none;
+    }
+    .nav-compact {
+      cursor: pointer;
+    }
+    .nav-list {
+      display: none;
+    }
+    #nav-indicator.expanded .nav-list {
+      display: block;
+    }
+    .nav-list-item {
+      padding: 4px 14px;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 12px;
+      color: #a0a0a0;
+      max-width: 300px;
+    }
+    .nav-list-item:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+    .nav-list-item.active {
+      color: #fff;
+      background: rgba(255, 200, 50, 0.1);
+      border-left: 2px solid rgba(255, 200, 50, 0.6);
+    }
+    #nav-highlight {
+      position: absolute;
+      left: 0;
+      right: 0;
+      background: rgba(255, 200, 50, 0.12);
+      border-left: 3px solid rgba(255, 200, 50, 0.6);
+      pointer-events: none;
+      z-index: 10;
+      transition: top 0.15s ease;
+      display: none;
     }
 `
 }
 
-// tocHTML returns the HTML markup for the TOC toggle button and panel.
+// tocHTML returns the HTML markup for the navigation indicator.
 // Returns empty string if there are no TOC entries.
 func tocHTML(entries []TOCEntry) string {
 	if len(entries) == 0 {
 		return ""
 	}
-
-	result := `
-  <button id="userinput-toggle" title="User Inputs">User Inputs</button>
-  <div id="userinput-panel">
-    <ul>
-`
-	for i, e := range entries {
-		escapedLabel := htmlpkg.EscapeString(e.Label)
-		result += `      <li><a href="javascript:void(0)" data-toc-index="` + itoa(i) + `" data-toc-line="` + itoa(e.Line) + `" title="` + escapedLabel + `">` + escapedLabel + `</a></li>
-`
-	}
-	result += `    </ul>
+	return `
+  <div id="nav-indicator">
+    <span class="nav-compact" id="nav-compact">
+      <span class="nav-btn" id="nav-prev" title="Previous command (&lt;)">&lt;</span>
+      <span class="nav-pos" id="nav-pos"></span>
+      <span class="nav-label" id="nav-label"></span>
+      <span class="nav-btn" id="nav-next" title="Next command (&gt;)">&gt;</span>
+    </span>
+    <div class="nav-list" id="nav-list"></div>
   </div>
 `
-	return result
 }
 
-// tocJS returns the JavaScript for TOC panel interactivity.
+// tocJS returns the JavaScript for < > keyboard navigation between user inputs.
 // Requires `xterm` variable to be in scope (the Terminal instance).
 // Returns empty string if there are no TOC entries.
 func tocJS(entries []TOCEntry) string {
@@ -113,18 +133,21 @@ func tocJS(entries []TOCEntry) string {
 	entriesJSON, _ := json.Marshal(entries)
 
 	return `
-    // User input navigation logic
+    // User input < > navigation
     (function() {
       var tocEntries = ` + string(entriesJSON) + `;
-      var tocToggle = document.getElementById('userinput-toggle');
-      var tocPanel = document.getElementById('userinput-panel');
-      var tocLinks = tocPanel.querySelectorAll('a[data-toc-line]');
+      var currentIndex = -1;
+      var indicator = document.getElementById('nav-indicator');
+      var posEl = document.getElementById('nav-pos');
+      var labelEl = document.getElementById('nav-label');
+      var highlight = document.createElement('div');
+      highlight.id = 'nav-highlight';
+      var navList = document.getElementById('nav-list');
+      var expanded = false;
 
       // Resolve actual rendered row for each entry by searching the xterm buffer.
-      // Raw line numbers from Go cannot account for cursor-movement escape sequences
-      // that xterm.js processes (overwriting rows), so we search the buffer directly.
       var resolvedRows = null;
-      // Search buffer for a needle starting from a given row
+
       function findInBuffer(buffer, needle, from) {
         for (var row = from; row < buffer.length; row++) {
           var line = buffer.getLine(row);
@@ -147,7 +170,6 @@ func tocJS(entries []TOCEntry) string {
             rows.push(searchFrom);
             continue;
           }
-          // Try progressively shorter prefix needles: 30, 20, 10, 5 chars
           var found = -1;
           var lengths = [30, 20, 10, 5];
           for (var li = 0; li < lengths.length && found < 0; li++) {
@@ -155,8 +177,6 @@ func tocJS(entries []TOCEntry) string {
             if (len < 2) continue;
             found = findInBuffer(buffer, label.substring(0, len), searchFrom);
           }
-          // Fallback: try substrings starting from various offsets
-          // This handles tab-completion where prefix was replaced by shell
           if (found < 0) {
             var offsets = [];
             for (var si = 1; si < label.length; si++) {
@@ -184,56 +204,30 @@ func tocJS(entries []TOCEntry) string {
           }
         }
         resolvedRows = rows;
+        if (rows.length > 0) {
+          indicator.style.display = 'block';
+          buildList();
+          updateIndicator();
+          // Check URL hash on load
+          var match = location.hash.match(/^#input-(\d+)$/);
+          if (match) {
+            navigateTo(parseInt(match[1], 10), false);
+          }
+        }
       }
-      // Defer resolution until after xterm rendering and resize complete
-      setTimeout(resolveRows, 200);
+      document.addEventListener('xterm-ready', resolveRows);
 
-      // Compute cell height once from the xterm DOM
       function getCellHeight() {
         var terminalDiv = document.getElementById('terminal');
         var xtermScreen = terminalDiv.querySelector('.xterm-screen');
         if (xtermScreen && xterm.buffer.active) {
-          // total pixel height / total rows = actual cell height
           var totalRows = xterm.rows;
           if (totalRows > 0) {
             return xtermScreen.getBoundingClientRect().height / totalRows;
           }
         }
-        return 17; // fallback
+        return 17;
       }
-
-      tocToggle.addEventListener('click', function(e) {
-        e.stopPropagation();
-        tocPanel.classList.toggle('open');
-      });
-
-      // Close panel when clicking outside
-      document.addEventListener('click', function(e) {
-        if (!tocPanel.contains(e.target) && e.target !== tocToggle) {
-          tocPanel.classList.remove('open');
-        }
-      });
-
-      // Click handler for TOC links
-      tocPanel.addEventListener('click', function(e) {
-        var link = e.target.closest('a[data-toc-line]');
-        if (!link) return;
-        e.preventDefault();
-        e.stopPropagation();
-
-        // Ensure rows are resolved
-        if (!resolvedRows) resolveRows();
-        if (!resolvedRows) return;
-
-        var idx = parseInt(link.getAttribute('data-toc-index'), 10);
-        if (idx >= 0 && idx < resolvedRows.length) {
-          tocPanel.classList.remove('open');
-          // Use requestAnimationFrame to scroll after panel closes
-          requestAnimationFrame(function() {
-            scrollToRow(resolvedRows[idx]);
-          });
-        }
-      });
 
       function scrollToRow(row) {
         var terminalDiv = document.getElementById('terminal');
@@ -244,31 +238,157 @@ func tocJS(entries []TOCEntry) string {
         window.scrollTo(0, Math.max(0, targetY - 20));
       }
 
-      // Highlight current section based on scroll position
-      function updateActiveLink() {
-        if (!resolvedRows) return;
+      function highlightRow(row) {
+        var terminalDiv = document.getElementById('terminal');
+        if (!highlight.parentNode) {
+          terminalDiv.style.position = 'relative';
+          terminalDiv.appendChild(highlight);
+        }
+        var cellHeight = getCellHeight();
+        highlight.style.top = (row * cellHeight) + 'px';
+        highlight.style.height = cellHeight + 'px';
+        highlight.style.display = 'block';
+      }
+
+      function buildList() {
+        navList.innerHTML = '';
+        for (var i = 0; i < tocEntries.length; i++) {
+          var item = document.createElement('div');
+          item.className = 'nav-list-item';
+          item.textContent = (i + 1) + '. ' + (tocEntries[i].label || '(empty)');
+          item.setAttribute('data-index', i);
+          item.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var idx = parseInt(this.getAttribute('data-index'), 10);
+            collapseList();
+            navigateTo(idx);
+          });
+          navList.appendChild(item);
+        }
+      }
+
+      function updateListActive() {
+        var items = navList.querySelectorAll('.nav-list-item');
+        for (var i = 0; i < items.length; i++) {
+          if (i === currentIndex) {
+            items[i].classList.add('active');
+          } else {
+            items[i].classList.remove('active');
+          }
+        }
+      }
+
+      function toggleExpand() {
+        expanded = !expanded;
+        if (expanded) {
+          indicator.classList.add('expanded');
+          updateListActive();
+        } else {
+          indicator.classList.remove('expanded');
+        }
+      }
+
+      function collapseList() {
+        expanded = false;
+        indicator.classList.remove('expanded');
+      }
+
+      function updateIndicator() {
+        if (!resolvedRows || resolvedRows.length === 0) return;
+        if (currentIndex < 0) {
+          posEl.textContent = '-/' + resolvedRows.length;
+          labelEl.textContent = '';
+        } else {
+          posEl.textContent = (currentIndex + 1) + '/' + resolvedRows.length;
+          labelEl.textContent = tocEntries[currentIndex].label || '';
+        }
+        if (expanded) updateListActive();
+      }
+
+      function navigateTo(index, pushState) {
+        if (!resolvedRows) resolveRows();
+        if (!resolvedRows || resolvedRows.length === 0) return;
+        if (index < 0) index = 0;
+        if (index >= resolvedRows.length) index = resolvedRows.length - 1;
+        currentIndex = index;
+        scrollToRow(resolvedRows[currentIndex]);
+        highlightRow(resolvedRows[currentIndex]);
+        updateIndicator();
+        if (pushState !== false) {
+          history.pushState(null, '', '#input-' + currentIndex);
+        }
+      }
+
+      function goNext() {
+        navigateTo(currentIndex + 1);
+      }
+
+      function goPrev() {
+        navigateTo(currentIndex - 1);
+      }
+
+      document.getElementById('nav-prev').addEventListener('click', function(e) { e.stopPropagation(); goPrev(); });
+      document.getElementById('nav-next').addEventListener('click', function(e) { e.stopPropagation(); goNext(); });
+      document.getElementById('nav-compact').addEventListener('click', toggleExpand);
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && expanded) {
+          collapseList();
+          return;
+        }
+        if (e.key === '<') {
+          e.preventDefault();
+          collapseList();
+          goPrev();
+        } else if (e.key === '>') {
+          e.preventDefault();
+          collapseList();
+          goNext();
+        } else if (e.key === 'Tab') {
+          e.preventDefault();
+          collapseList();
+          if (e.shiftKey) {
+            goPrev();
+          } else {
+            goNext();
+          }
+        }
+      });
+
+      // Browser back/forward support
+      window.addEventListener('popstate', function() {
+        var match = location.hash.match(/^#input-(\d+)$/);
+        if (match) {
+          navigateTo(parseInt(match[1], 10), false);
+        }
+      });
+
+      // Track scroll position to update current index
+      window.addEventListener('scroll', function() {
+        if (!resolvedRows || resolvedRows.length === 0) return;
         var terminalDiv = document.getElementById('terminal');
         var termTop = terminalDiv.getBoundingClientRect().top + window.pageYOffset;
         var cellHeight = getCellHeight();
         var scrollTop = window.pageYOffset + 40;
 
-        var activeIndex = 0;
+        var idx = -1;
         for (var i = resolvedRows.length - 1; i >= 0; i--) {
           var entryY = termTop + (resolvedRows[i] * cellHeight);
           if (scrollTop >= entryY) {
-            activeIndex = i;
+            idx = i;
             break;
           }
         }
-
-        tocLinks.forEach(function(link, idx) {
-          link.classList.toggle('active', idx === activeIndex);
-        });
-      }
-
-      window.addEventListener('scroll', updateActiveLink, { passive: true });
-      // Initial highlight
-      setTimeout(updateActiveLink, 300);
+        if (idx !== currentIndex) {
+          currentIndex = idx;
+          updateIndicator();
+          if (currentIndex >= 0) {
+            highlightRow(resolvedRows[currentIndex]);
+          } else {
+            highlight.style.display = 'none';
+          }
+        }
+      }, { passive: true });
     })();
 `
 }

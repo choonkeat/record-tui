@@ -266,17 +266,17 @@ func TestConvertSessionToHTML_WithTimingAndInput(t *testing.T) {
 	}
 	htmlString := string(htmlBytes)
 
-	if !strings.Contains(htmlString, `id="userinput-toggle"`) {
-		t.Error("HTML should contain TOC toggle button")
+	if !strings.Contains(htmlString, `id="nav-indicator"`) {
+		t.Error("HTML should contain navigation indicator")
 	}
-	if !strings.Contains(htmlString, `id="userinput-panel"`) {
-		t.Error("HTML should contain TOC panel")
+	if !strings.Contains(htmlString, `id="nav-prev"`) {
+		t.Error("HTML should contain prev navigation button")
 	}
-	if !strings.Contains(htmlString, ">ls</a>") {
-		t.Error("HTML should contain 'ls' in TOC")
+	if !strings.Contains(htmlString, `"ls"`) {
+		t.Error("HTML should contain 'ls' in navigation data")
 	}
-	if !strings.Contains(htmlString, ">npm test</a>") {
-		t.Error("HTML should contain 'npm test' in TOC")
+	if !strings.Contains(htmlString, `"npm test"`) {
+		t.Error("HTML should contain 'npm test' in navigation data")
 	}
 }
 
@@ -299,9 +299,9 @@ func TestConvertSessionToHTML_WithoutTimingFiles(t *testing.T) {
 	htmlBytes, _ := os.ReadFile(htmlPath)
 	htmlString := string(htmlBytes)
 
-	// Should NOT have TOC when no timing files
-	if strings.Contains(htmlString, `id="userinput-toggle"`) {
-		t.Error("HTML should NOT contain TOC when no timing files")
+	// Should NOT have navigation when no timing files
+	if strings.Contains(htmlString, `id="nav-indicator"`) {
+		t.Error("HTML should NOT contain navigation when no timing files")
 	}
 }
 

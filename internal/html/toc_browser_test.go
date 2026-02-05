@@ -8,18 +8,18 @@ import (
 	"testing"
 )
 
-// TestStreamingTOC_NoJSErrors starts a server with streaming HTML that includes
-// TOC entries and verifies that clicking a TOC item does not produce JavaScript
-// errors. This catches scoping bugs like "xterm is not defined" in the TOC JS.
+// TestStreamingNav_NoJSErrors starts a server with streaming HTML that includes
+// navigation entries and verifies that pressing < > does not produce JavaScript
+// errors. This catches scoping bugs like "xterm is not defined" in the nav JS.
 //
-// Run with: RUN_BROWSER_TEST=1 go test -run TestStreamingTOC_NoJSErrors -v ./internal/html/...
+// Run with: RUN_BROWSER_TEST=1 go test -run TestStreamingNav_NoJSErrors -v ./internal/html/...
 // Then use browser tools to interact with the page.
-func TestStreamingTOC_NoJSErrors(t *testing.T) {
+func TestStreamingNav_NoJSErrors(t *testing.T) {
 	if os.Getenv("RUN_BROWSER_TEST") != "1" {
 		t.Skip("Skipping browser test (set RUN_BROWSER_TEST=1 to run)")
 	}
 
-	// Minimal terminal content with recognizable markers for TOC entries
+	// Minimal terminal content with recognizable markers for nav entries
 	sessionContent := "$ echo hello\r\nhello\r\n$ ls -la\r\ntotal 0\r\n"
 
 	tocEntries := []TOCEntry{
@@ -28,7 +28,7 @@ func TestStreamingTOC_NoJSErrors(t *testing.T) {
 	}
 
 	htmlContent, err := RenderStreamingPlaybackHTML(StreamingOptions{
-		Title:   "TOC Browser Test",
+		Title:   "Nav Browser Test",
 		DataURL: "./session.log",
 		TOC:     tocEntries,
 	})
@@ -62,7 +62,7 @@ func TestStreamingTOC_NoJSErrors(t *testing.T) {
 	// Suppress unused import
 	_ = httptest.NewServer
 
-	fmt.Println("=== TOC Browser Test server running on http://localhost:3001 ===")
+	fmt.Println("=== Nav Browser Test server running on http://localhost:3001 ===")
 	fmt.Println("Waiting for browser test to complete...")
 	fmt.Println("The test will be driven by browser MCP tools.")
 	fmt.Println("Press Ctrl+C to stop.")

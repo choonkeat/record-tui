@@ -288,24 +288,27 @@ func TestRenderPlaybackHTML_WithTOC(t *testing.T) {
 		t.Fatalf("RenderPlaybackHTML failed: %v", err)
 	}
 
-	// Should contain TOC toggle button
-	if !strings.Contains(html, `id="userinput-toggle"`) {
-		t.Error("HTML should contain TOC toggle button")
+	// Should contain navigation indicator
+	if !strings.Contains(html, `id="nav-indicator"`) {
+		t.Error("HTML should contain navigation indicator")
 	}
-	// Should contain TOC panel
-	if !strings.Contains(html, `id="userinput-panel"`) {
-		t.Error("HTML should contain TOC panel")
+	// Should contain prev/next buttons
+	if !strings.Contains(html, `id="nav-prev"`) {
+		t.Error("HTML should contain prev navigation button")
 	}
-	// Should contain command labels
-	if !strings.Contains(html, ">ls</a>") {
-		t.Error("HTML should contain 'ls' command in TOC")
+	if !strings.Contains(html, `id="nav-next"`) {
+		t.Error("HTML should contain next navigation button")
 	}
-	if !strings.Contains(html, ">npm test</a>") {
-		t.Error("HTML should contain 'npm test' command in TOC")
-	}
-	// Should contain TOC JS
+	// Should contain TOC JS with entry data
 	if !strings.Contains(html, "tocEntries") {
 		t.Error("HTML should contain TOC JavaScript")
+	}
+	// Should contain command labels in JSON
+	if !strings.Contains(html, `"ls"`) {
+		t.Error("HTML should contain 'ls' command in TOC data")
+	}
+	if !strings.Contains(html, `"npm test"`) {
+		t.Error("HTML should contain 'npm test' command in TOC data")
 	}
 }
 
@@ -317,12 +320,9 @@ func TestRenderPlaybackHTML_WithoutTOC(t *testing.T) {
 		t.Fatalf("RenderPlaybackHTML failed: %v", err)
 	}
 
-	// Should NOT contain TOC elements when no entries provided
-	if strings.Contains(html, `id="userinput-toggle"`) {
-		t.Error("HTML should not contain TOC toggle when no entries")
-	}
-	if strings.Contains(html, `id="userinput-panel"`) {
-		t.Error("HTML should not contain TOC panel when no entries")
+	// Should NOT contain navigation elements when no entries provided
+	if strings.Contains(html, `id="nav-indicator"`) {
+		t.Error("HTML should not contain navigation indicator when no entries")
 	}
 }
 
@@ -337,8 +337,9 @@ func TestRenderPlaybackHTML_TOCLabelEscaping(t *testing.T) {
 		t.Fatalf("RenderPlaybackHTML failed: %v", err)
 	}
 
-	// Script tag should be escaped
+	// Labels are in JSON now, so script tags get JSON-escaped (quotes become \")
+	// The key thing is they should NOT appear as raw HTML tags
 	if strings.Contains(html, "<script>alert") {
-		t.Error("TOC label should be HTML escaped")
+		t.Error("TOC label should be escaped")
 	}
 }

@@ -246,6 +246,11 @@ func RenderStreamingPlaybackHTML(opts StreamingOptions) (string, error) {
             // Scroll to top and reset page position
             xterm.scrollToTop();
             window.scrollTo(0, 0);
+            document.dispatchEvent(new Event('xterm-ready'));
+          }, 100);
+        } else {
+          setTimeout(function() {
+            document.dispatchEvent(new Event('xterm-ready'));
           }, 100);
         }
       } catch (err) {

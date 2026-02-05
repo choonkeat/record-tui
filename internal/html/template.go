@@ -215,6 +215,7 @@ func RenderPlaybackHTML(frames []PlaybackFrame, title string, footerLink FooterL
 
       // Scroll to the top so content is visible from the start
       xterm.scrollToTop();
+      document.dispatchEvent(new Event('xterm-ready'));
     }, 0);
 ` + tocJS(tocEntries) + `
   </script>
